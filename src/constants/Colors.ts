@@ -1,0 +1,42 @@
+const Colors = {
+  light: {
+    text: '#000',
+    link: '#000',
+    tab: "aqua",
+    background: '#fff',
+    tint: '#2f95dc',
+    tabIconDefault: '#ccc',
+    tabIconSelected: '#2f95dc',
+    inputBackground: '#f5f5f5',
+    borderColor: '#e0e0e0',
+    modalBackground: '#fff',
+    success: '#4CAF50',
+    error: '#F44336',
+    warning: '#FFC107',
+    info: '#2196F3',
+    grade1: '#f2fcfe',
+    grade2: '#1c92d2',
+  },
+  dark: {
+    text: '#fff',
+    link: '#fff',
+    tab: "blue",
+    //background: '#121212',
+    //inputBackground: '#1e1e1e',
+    background: '#121212',
+    inputBackground: '#1e1e1e',
+    tint: '#fff',
+    tabIconDefault: '#666',
+    tabIconSelected: '#fff',
+    borderColor: '#333',
+    modalBackground: '#1e1e1e',
+    success: '#81C784',
+    error: '#E57373',
+    warning: '#FFD54F',
+    info: '#64B5F6',
+    grade1: '#373B44',
+    grade2: '#4286f4',
+  }
+};
+
+export default Colors;
