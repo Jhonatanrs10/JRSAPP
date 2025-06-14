@@ -21,7 +21,12 @@
         "foregroundImage": "./src/assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.CAMERA"
+      ],
+      "package": "com.jhonatanrs10.JRSAPP"
     },
     "web": {
       "bundler": "metro",
@@ -30,11 +35,22 @@
     },
     "plugins": [
       "expo-router",
-      "expo-sqlite",
-      "expo-barcode-scanner"
+      "expo-sqlite"
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "899e2300-788e-46d1-9724-c6bc377656f6"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/899e2300-788e-46d1-9724-c6bc377656f6"
     }
   }
 }

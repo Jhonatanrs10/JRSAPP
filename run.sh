@@ -41,7 +41,8 @@ install_dependencies() {
     expo-clipboard@latest \
     expo-print@latest \
     expo-linear-gradient@latest \
-    expo-camera@latest
+    expo-camera@latest \
+    expo-doctor@latest
   echo "Dependências instaladas."
   echo -n "Pressione ENTER para continuar..."
   read -r
@@ -69,7 +70,7 @@ build_apk() {
   echo ""
   echo "Iniciando o build do APK (profile preview)..."
   echo "Isso pode levar um tempo. Você receberá um link para baixar o APK ao final."
-  npx eas-cli@latest build -p android --profile preview --type apk
+  npx eas-cli@latest build -p android --profile preview
 
   echo ""
   echo "Lembrete: O arquivo eas.json deve estar na pasta raiz do seu projeto Expo."
