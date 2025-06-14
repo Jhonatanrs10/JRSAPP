@@ -22,7 +22,7 @@ export function ThemedPicker(props: ThemedPickerProps) {
           padding: 0,
           margin: 0,
           fontSize: 16,
-          height: 50,
+          height: 60,
         },
       ]}
       {...otherProps}

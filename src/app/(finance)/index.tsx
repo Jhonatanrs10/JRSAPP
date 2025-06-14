@@ -169,7 +169,7 @@ export default function Finance() {
           color="info" // Use colorName com o nome da cor do seu Colors.ts
         />
         <ButtonTT 
-          title="Excluir" 
+          title="X" 
           onLongPress={() => confirmarExclusao(transacao.id)}
           color="error" // Use colorName com o nome da cor do seu Colors.ts
         />
@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   buscaInput: {
-    height: 40,
+    height: 50,
     paddingHorizontal: 15,
     borderRadius: 8,
     borderWidth: 1,

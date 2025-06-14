@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ScrollView, Pressable, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { ScrollView, Pressable, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Text, View } from '../../components/Themed';
 import CalculatorButtons from '../../components/Jhonatanrs/CalculatorButtons';
@@ -8,7 +8,7 @@ import { useFocusEffect } from '@react-navigation/native';
 
 export default function App() {
   const [input1, setInput1] = useState('');
-  const [input2, setInput2] = useState('1');
+  const [input2, setInput2] = useState('0');
   const [selectedProduct, setSelectedProduct] = useState<string>('Produto');
   const [products, setProducts] = useState<string[]>([]);
   const [history, setHistory] = useState<{ unitValue: number; quantity: number; product: string }[]>([]);
@@ -18,8 +18,7 @@ export default function App() {
   const repeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const clearInput1 = () => setInput1('');
-const clearInput2 = () => setInput2('');
-
+  const clearInput2 = () => setInput2('0');
 
   useEffect(() => {
     const loadHistory = async () => {
@@ -32,12 +31,12 @@ const clearInput2 = () => setInput2('');
   }, []);
 
   useEffect(() => {
-    const loadProducts = async () => {
-      const saved = await AsyncStorage.getItem('products');
-      if (saved) setProducts(JSON.parse(saved));
-    };
-    loadProducts();
-  }, []);
+      const loadProducts = async () => {
+        const saved = await AsyncStorage.getItem('products');
+        if (saved) setProducts(JSON.parse(saved));
+      };
+      loadProducts();
+    }, []);
 
   useEffect(() => {
     const total = history.reduce(
@@ -53,33 +52,29 @@ const clearInput2 = () => setInput2('');
   }, [history]);
   
   useFocusEffect(
-  React.useCallback(() => {
-    // Função que carrega histórico e produtos
-    const loadData = async () => {
-      const storedHistory = await AsyncStorage.getItem('history');
-      if (storedHistory) {
-        setHistory(JSON.parse(storedHistory));
-      } else {
-        setHistory([]);
-      }
+    React.useCallback(() => {
+      const loadData = async () => {
+        const storedHistory = await AsyncStorage.getItem('history');
+        if (storedHistory) {
+          setHistory(JSON.parse(storedHistory));
+        } else {
+          setHistory([]);
+        }
 
-      const savedProducts = await AsyncStorage.getItem('products');
-      if (savedProducts) {
-        setProducts(JSON.parse(savedProducts));
-      } else {
-        setProducts([]);
-      }
-    };
+        const savedProducts = await AsyncStorage.getItem('products');
+        if (savedProducts) {
+          setProducts(JSON.parse(savedProducts));
+        } else {
+          setProducts([]);
+        }
+      };
 
-    loadData();
+      loadData();
 
-    // Opcional: cleanup
-    return () => {
-      // Se precisar cancelar algum timer ou cleanup
-    };
-  }, [])
-);
-
+      return () => {
+      };
+    }, [])
+  );
 
   const formatToCurrency = (value: string): string => {
     const numeric = value.replace(/\D/g, '');
@@ -88,14 +83,21 @@ const clearInput2 = () => setInput2('');
   };
 
   const addToHistory = async () => {
-  const unitValue = parseFloat(input1.replace(/\D/g, '') || '0') / 100;
+    const unitValue = parseFloat(input1.replace(/\D/g, '') || '0') / 100;
+    let quantityToAdd = parseInt(input2, 10);
 
-  // 👇 Aqui definimos que se input2 for vazio ou zero, usa 1
-  const rawQuantity = parseInt(input2 || '0', 10);
-  const quantity = rawQuantity > 0 ? rawQuantity : 1;
+    if (unitValue <= 0) {
+      Alert.alert('Valor inválido', 'Por favor, insira um valor unitário maior que zero.');
+      return;
+    }
+    
+    // Altera '0' para '1' e alerta o usuário
+    if (quantityToAdd === 0) {
+        quantityToAdd = 1;
+    }
 
-  if (unitValue > 0 && selectedProduct) {
-    const newItem = { product: selectedProduct, unitValue, quantity };
+
+    const newItem = { product: selectedProduct, unitValue, quantity: quantityToAdd };
     const updatedHistory = [...history, newItem];
     setHistory(updatedHistory);
 
@@ -106,68 +108,70 @@ const clearInput2 = () => setInput2('');
     }
 
     setInput1('');
-    setInput2('');
-    setSelectedProduct('Produto');  // <-- aqui reseta o produto para o padrão
-  }
-};
+    setInput2('0');
+    setSelectedProduct('Produto');
+  };
 
-const handleNumberPressInput1 = (num: string) =>
-  setInput1((prev) => {
-    if (prev.length < 10) return prev + num;
-    return prev;
-  });
+  const handleNumberPressInput1 = (num: string) =>
+    setInput1((prev) => {
+      if (prev.length < 10) return prev + num;
+      return prev;
+    });
+
   const handleBackspaceInput1 = () => setInput1((prev) => prev.slice(0, -1));
+  
   const handleNumberPressInput2 = (num: string) => {
-  setInput2((prev) => {
-    if (prev === '' || prev === '1') {
-      return num;
-    }
-    return prev + num;
-  });
-};
+    setInput2((prev) => {
+      if (prev === '0') {
+        if (num === '0') {
+          return '0';
+        }
+        return num;
+      }
+      return prev + num;
+    });
+  };
 
-  const handleBackspaceInput2 = () => setInput2((prev) => prev.slice(0, -1));
+  const handleBackspaceInput2 = () => {
+    setInput2((prev) => {
+      const newValue = prev.slice(0, -1);
+      return newValue === '' ? '0' : newValue;
+    });
+  };
 
   return (
     <View style={{ flex: 1, paddingTop: 10, paddingHorizontal: 15 }}>
     
       <Text style={[styles.label, { marginTop: 0 }]}>Total acumulado:</Text>
       <Text
-  style={[styles.value, { color: '#007700' }]}
-  numberOfLines={1}
-  ellipsizeMode="tail"
-  adjustsFontSizeToFit={false}
->
-  {accumulatedTotal}
-</Text>
+        style={[styles.value, { color: '#007700' }]}
+        numberOfLines={1}
+        ellipsizeMode="tail"
+        adjustsFontSizeToFit={false}
+      >
+        {accumulatedTotal}
+      </Text>
 
-
- 
-<ProductSelector
-  selectedProduct={selectedProduct}
-  onSelect={setSelectedProduct}
-/>
-
-
+      <ProductSelector
+        selectedProduct={selectedProduct}
+        onSelect={setSelectedProduct}
+      />
 
       <Text style={styles.value}>Unidade: {formatToCurrency(input1)}</Text>
       <CalculatorButtons
-  onPressNumber={handleNumberPressInput1}
-  onBackspace={handleBackspaceInput1}
-  onStartBackspaceHold={clearInput1}
-  onStopBackspaceHold={() => {}} // não faz mais nada
-/>
-
-
+        onPressNumber={handleNumberPressInput1}
+        onBackspace={handleBackspaceInput1}
+        onStartBackspaceHold={clearInput1}
+        onStopBackspaceHold={() => {}}
+      />
       
-      <Text style={styles.value}>Quantidade: {input2 || '0'}</Text>
+      <Text style={styles.value}>Quantidade: {input2}</Text>
       <CalculatorButtons
-  onPressNumber={handleNumberPressInput2}
-  onBackspace={handleBackspaceInput2}
-  onStartBackspaceHold={clearInput2}
-  onStopBackspaceHold={() => {}}
-/>
-
+        onPressNumber={handleNumberPressInput2}
+        onBackspace={handleBackspaceInput2}
+        onStartBackspaceHold={clearInput2}
+        onStopBackspaceHold={() => {}}
+      />
 
       <Pressable style={styles.addButton} onPress={addToHistory}>
         <Text style={styles.addButtonText}>Adicionar ao total</Text>

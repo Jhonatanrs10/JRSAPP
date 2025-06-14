@@ -183,7 +183,7 @@ export default function Input() {
 
       Alert.alert('Sucesso', 'Transação salva com sucesso!');
       limparCampos();
-      router.push('/input');
+      router.push('/');
     } catch (error) {
       console.error('Erro ao salvar:', error);
       Alert.alert('Erro', 'Não foi possível salvar a transação');
@@ -251,12 +251,12 @@ export default function Input() {
                     setCategoria('');
                     setCategoriasFiltradas(categorias);
                   }}
-                  style={[styles.buttonInInput, { height: 50, backgroundColor: colors.inputBackground }]}
+                  style={[styles.buttonInInput, { height: 60, backgroundColor: colors.inputBackground }]}
                 >
                   <Text style={{ color: colors.text }}>✕</Text>
                 </TouchableOpacity>
               ) : (
-                <View style={[styles.sugestaoIcon, { height: 50, backgroundColor: colors.inputBackground }]}></View>
+                <View style={[styles.sugestaoIcon, { height: 60, backgroundColor: colors.inputBackground }]}></View>
               )}
             </View>
             {mostrarSugestoes && categoriasFiltradas.length > 0 && (
@@ -291,7 +291,7 @@ export default function Input() {
                   style={styles.sugestoesList}
                   keyboardShouldPersistTaps="handled"
                   nestedScrollEnabled={true}
-                  scrollEnabled={true}
+                  scrollEnabled={false}
                 />
               </View>
             )}
@@ -376,7 +376,7 @@ export default function Input() {
             title="Cancelar Edição"
             onPress={() => {
               limparCampos();
-              router.push('/input');
+              router.push('/');
             }}
             color={colors.error}
           />
@@ -472,7 +472,7 @@ const styles = StyleSheet.create({
   },
   sugestaoItem: {
     padding: 12,
-    height: 50,
+    height: 60,
     borderBottomWidth: 1,
   },
 });

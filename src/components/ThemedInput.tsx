@@ -19,7 +19,7 @@ export function ThemedInput(props: ThemedInputProps) {
           borderRadius: 0,
           padding: 10,
           fontSize: 16,
-          height: 50,
+          height: 60,
           paddingHorizontal: 15
         },
         style,

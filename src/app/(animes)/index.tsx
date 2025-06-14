@@ -92,9 +92,9 @@ const AnimeItem: React.FC<AnimeItemProps> = ({ anime, colors, abrirLink, editarA
           </View>
         )}
         {anime.seasons && (
-          <View style={[styles.detalheItem,{backgroundColor: colors.inputBackground}]}>
-            <Text style={[styles.detalheLabel, { color: colors.text }]}>Episódios por Temporada:</Text>
-            <Text style={[styles.detalheValor, { color: colors.text }]}>
+          <View style={[styles.detalheItem,{backgroundColor: colors.inputBackground,flexDirection: 'row', justifyContent: 'space-between',flexShrink: 1}]}>
+            <Text style={[styles.detalheLabel, { color: colors.text }]}>Episódios:</Text>
+            <Text style={[styles.detalheValor, { color: colors.text, flexShrink: 1, marginStart: 10}]}>
               {(() => {
                 if (!anime.seasons || anime.seasons.trim() === '') {
                   return 'N/A';
@@ -144,7 +144,7 @@ const AnimeItem: React.FC<AnimeItemProps> = ({ anime, colors, abrirLink, editarA
         />
 
         <ButtonTT
-          title="Excluir"
+          title="X"
           onLongPress={() => confirmarExclusao(anime.id)}
           color="error"
         />
@@ -399,7 +399,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   buscaInput: {
-    height: 40,
+    height: 50,
     paddingHorizontal: 15,
     borderRadius: 8,
     borderWidth: 1,

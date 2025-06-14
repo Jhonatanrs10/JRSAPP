@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   Linking,
   Platform,
-  KeyboardAvoidingView, // Importar KeyboardAvoidingView
+  KeyboardAvoidingView,
 } from 'react-native';
 import { Text, View } from '../../components/Themed';
 import { ThemedInput } from '../../components/ThemedInput';
@@ -20,15 +20,12 @@ import { FontAwesome } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import ButtonTT from '../../components/Jhonatanrs/ButtonTT';
 
-// --- IMPORTAÇÃO DO NOVO COMPONENTE E SUA INTERFACE DE REF ---
 import DynamicSeasonInput from '../../components/Jhonatanrs/DynamicSeasonInput';
-import type { DynamicSeasonInputRef } from '../../components/Jhonatanrs/DynamicSeasonInput'; // Importa a interface da ref
+import type { DynamicSeasonInputRef } from '../../components/Jhonatanrs/DynamicSeasonInput';
 
-// Tipos para os dados do anime
 type StatusAnime = 'assistindo' | 'já assistido';
 type ReleaseDay = 'segunda' | 'terça' | 'quarta' | 'quinta' | 'sexta' | 'sábado' | 'domingo';
 
-// Interface para a estrutura de um objeto Anime
 interface Anime {
   id: number;
   nome: string;
@@ -36,7 +33,7 @@ interface Anime {
   release_day: ReleaseDay;
   observacao: string | null;
   link: string | null;
-  seasons: string | null; // Armazenado como string JSON, ex: '[12,24,12]'
+  seasons: string | null;
 }
 
 export default function AnimesInput() {
@@ -45,20 +42,17 @@ export default function AnimesInput() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
 
-  // Estados para o formulário de adição/edição de animes
   const [nomeAnime, setNomeAnime] = useState('');
   const [status, setStatus] = useState<StatusAnime>('assistindo');
   const [releaseDay, setReleaseDay] = useState<ReleaseDay>('segunda');
   const [observacao, setObservacao] = useState('');
   const [link, setLink] = useState('');
 
-  // --- NOVOS ESTADOS E REF PARA O COMPONENTE DynamicSeasonInput ---
-  const [dynamicSeasonsData, setDynamicSeasonsData] = useState<number[]>([]); // Para armazenar os valores numéricos das temporadas
-  const dynamicInputRef = useRef<DynamicSeasonInputRef | null>(null); // Ref tipada corretamente
+  const [dynamicSeasonsData, setDynamicSeasonsData] = useState<number[]>([]);
+  const dynamicInputRef = useRef<DynamicSeasonInputRef | null>(null);
 
   const [animeSendoEditado, setAnimeSendoEditado] = useState<Anime | null>(null);
 
-  // Função para limpar todos os campos do formulário e redefinir o estado de edição
   const limparCampos = useCallback(() => {
     setNomeAnime('');
     setStatus('assistindo');
@@ -66,18 +60,15 @@ export default function AnimesInput() {
     setObservacao('');
     setLink('');
     if (dynamicInputRef.current) {
-        dynamicInputRef.current.clearAllSeasons(); // Chama o método para limpar no componente filho
+        dynamicInputRef.current.clearAllSeasons();
     }
-    setDynamicSeasonsData([]); // Limpa o estado local de temporadas
+    setDynamicSeasonsData([]);
     setAnimeSendoEditado(null);
     router.setParams({});
   }, [router]);
 
-  // Efeito para carregar dados quando houver params.id (modo de edição)
   useEffect(() => {
     if (params.id) {
-      console.log('Carregando valores iniciais para edição:', params);
-
       const loadAnimeForEdit = async () => {
         try {
           const allAnimes = await buscarAnimes() as Anime[];
@@ -89,17 +80,14 @@ export default function AnimesInput() {
             setReleaseDay(foundAnime.release_day);
             setObservacao(foundAnime.observacao || '');
             setLink(foundAnime.link || '');
-            // --- CARREGA OS VALORES DE SEASONS PARA O COMPONENTE DynamicSeasonInput ---
             if (foundAnime.seasons) {
               try {
                 const parsedSeasons = JSON.parse(foundAnime.seasons);
                 if (dynamicInputRef.current && parsedSeasons instanceof Array) {
                   dynamicInputRef.current.setInitialSeasons(parsedSeasons);
-                  // REMOVIDO: setDynamicSeasonsData(parsedSeasons); // <-- Esta linha era redundante
                 } else {
-                    setDynamicSeasonsData([]); // Limpa se for inválido ou não um array
+                    setDynamicSeasonsData([]);
                 }
-
               } catch (e) {
                 console.error("Erro ao fazer parse de seasons:", e);
                 setDynamicSeasonsData([]);
@@ -123,16 +111,13 @@ export default function AnimesInput() {
     }
   }, [params.id, limparCampos]);
 
-  // Função assíncrona para salvar um novo anime ou atualizar um existente
   async function salvarOuAtualizarAnime() {
     if (!nomeAnime || !status) {
       Alert.alert('Erro', 'Nome do anime e status são obrigatórios.');
       return;
     }
 
-    // --- OBTER OS DADOS DAS TEMPORADAS DO COMPONENTE FILHO ---
     const seasonsToSave = dynamicInputRef.current?.getFilledSeasons();
-    // A função getFilledSeasons já retorna um number[], então não precisa de Object.values
     const seasonsArray = seasonsToSave || [];
     const seasonsJsonString = JSON.stringify(seasonsArray);
 
@@ -143,7 +128,7 @@ export default function AnimesInput() {
         release_day: releaseDay,
         observacao: observacao,
         link: link,
-        seasons: seasonsJsonString, // Salva o JSON string
+        seasons: seasonsJsonString,
       };
 
       if (animeSendoEditado) {
@@ -155,23 +140,12 @@ export default function AnimesInput() {
       }
 
       limparCampos();
-      router.push('/input'); // Volta para a tela de input após salvar
+      router.push('/');
     } catch (error) {
       console.error('Erro ao salvar/atualizar anime:', error);
       Alert.alert('Erro', 'Não foi possível salvar/atualizar o anime');
     }
   }
-
-  const abrirLink = (url: string | null) => {
-    if (url) {
-      const prefixedUrl = url.startsWith('http://') || url.startsWith('https://') ? url : `https://${url}`;
-      Linking.openURL(prefixedUrl).catch((err) =>
-        Alert.alert('Erro', `Não foi possível abrir o link: ${err.message || err}`)
-      );
-    } else {
-      Alert.alert('Erro', 'Nenhum link fornecido para este anime.');
-    }
-  };
 
   const handlePasteLink = async () => {
     try {
@@ -189,11 +163,10 @@ export default function AnimesInput() {
   };
 
   return (
-    // --- KEYBOARDAVOIDINGVIEW ENVOLVENDO O CONTEÚDO PRINCIPAL ---
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0} // Ajuste conforme necessário
+      // keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0} // Este pode ser ajustado para um valor, ex: Header height
     >
       <Text style={[styles.title, { color: colors.text }]}>
         {animeSendoEditado ? `Editar Anime (${animeSendoEditado.id})` : 'Novo Anime'}
@@ -205,7 +178,7 @@ export default function AnimesInput() {
         contentContainerStyle={styles.formContent}
         showsVerticalScrollIndicator={false}
         showsHorizontalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled" // Importante para que toques fora dos inputs não fechem o teclado
+        keyboardShouldPersistTaps="handled"
       >
         <View style={styles.inputContainer}>
           <Text style={[styles.label, { color: colors.text }]}>Nome do Anime</Text>
@@ -231,7 +204,7 @@ export default function AnimesInput() {
         <View style={styles.inputContainer}>
           <Text style={[styles.label, { color: colors.text }]}>Dia de Lançamento</Text>
           <ThemedPicker
-            style={{color: 'red'}}
+            style={{color: colors.text}} // Use colors.text para consistência
             selectedValue={releaseDay}
             onValueChange={(itemValue) => setReleaseDay(itemValue as ReleaseDay)}
           >
@@ -271,7 +244,7 @@ export default function AnimesInput() {
             <TouchableOpacity
               onPress={handlePasteLink}
               onLongPress={() => setLink('')}
-              style={[styles.buttonInInput,{height: 50, backgroundColor: colors.inputBackground}]}
+              style={[styles.buttonInInput,{height: 60, backgroundColor: colors.inputBackground}]}
             >
               <FontAwesome name="paste" size={20} color={colors.info} />
             </TouchableOpacity>
@@ -280,25 +253,24 @@ export default function AnimesInput() {
 
         <View style={styles.inputContainer}>
           <DynamicSeasonInput
-            ref={dynamicInputRef} // Passa a ref para o componente filho
-            onChange={setDynamicSeasonsData} // Recebe as mudanças de estado do componente filho
-            // --- APLIQUE SEUS ESTILOS AQUI ---
-          style={{
-            backgroundColor: colors.background,
-          }}
-          seasonContainerStyle={{
-            backgroundColor: colors.background,
-            borderColor: colors.borderColor, // Adicionado para combinar com o tema
-          }}
-          labelStyle={{
-            backgroundColor: colors.background,
-            color: colors.text
-          }}
-          textInputStyle={{
-            backgroundColor: colors.inputBackground,
-            color: colors.text,
-            borderColor: colors.borderColor, // Adicionado para combinar com o tema
-          }}
+            ref={dynamicInputRef}
+            onChange={setDynamicSeasonsData}
+            style={{
+              backgroundColor: colors.background,
+            }}
+            seasonContainerStyle={{
+              backgroundColor: colors.background,
+              borderColor: colors.borderColor,
+            }}
+            labelStyle={{
+              backgroundColor: colors.background,
+              color: colors.text
+            }}
+            textInputStyle={{
+              backgroundColor: colors.inputBackground,
+              color: colors.text,
+              borderColor: colors.borderColor,
+            }}
           />
         </View>
       </ScrollView>
@@ -309,7 +281,7 @@ export default function AnimesInput() {
             title="Cancelar Edição"
             onPress={() => {
               limparCampos();
-              router.push('/input');
+              router.push('/');
             }}
             color={colors.error}
           />
@@ -345,11 +317,12 @@ const styles = StyleSheet.create({
     marginVertical: 10,
   },
   formContainer: {
-    flex: 1, // Isso é crucial para o ScrollView funcionar bem dentro do KeyboardAvoidingView
-    marginBottom: 30, // Remova este ou ajuste cuidadosamente, pois o KAV lida com o espaçamento
+    flex: 1,
+    // Remover marginBottom aqui para que o ScrollView ocupe todo o espaço disponível
+    // e o KeyboardAvoidingView lide com o ajuste inferior.
   },
   formContent: {
-    paddingBottom: 20, // Garante que o último input não fique colado na parte inferior
+    paddingBottom: 20,
   },
   inputContainer: {
     marginBottom: 15,
@@ -360,7 +333,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   multilineInput: {
-    minHeight: 50,
+    minHeight: 60,
     paddingHorizontal: 15,
     textAlignVertical: 'auto',
   },
@@ -370,7 +343,7 @@ const styles = StyleSheet.create({
     borderWidth: 0,
     borderRadius: 0,
     overflow: 'hidden',
-    height: 50
+    height: 60
   },
   linkTextInput: {
     flex: 1,
@@ -378,22 +351,28 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 16,
   },
-  linkButton: {
+  linkButton: { // Este estilo não está sendo usado no seu código atual
     padding: 10,
     justifyContent: 'center',
     alignItems: 'center',
     height: '100%',
   },
+  buttonInInput: {
+    padding: 10,
+    fontSize: 16,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
   buttonContainer: {
      flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 10, // Espaço entre o ScrollView e os botões
+    marginTop: 10,
     marginBottom: 0,
-
   },
   spacer: {
     width: 10,
   },
+  // Estes estilos parecem ser de outro componente e não são usados aqui
   buscaContainer: {
     marginBottom: 15,
     borderRadius: 12,
@@ -405,20 +384,14 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   buscaInput: {
-    height: 40,
+    height: 60,
     paddingHorizontal: 15,
     borderRadius: 8,
     borderWidth: 1,
     fontSize: 16,
   },
-  scrollView: {
+  scrollView: { // Este estilo não está sendo usado no seu ScrollView principal, mas em outro lugar?
     flex: 1,
-  },
-    buttonInInput: {
-    padding: 10,
-    fontSize: 12,
-    justifyContent: 'center',
-    alignItems: 'center'
   },
   animeItem: { borderRadius: 12, marginBottom: 15, overflow: 'hidden', borderWidth: 1, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3, },
   animeHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 15, },

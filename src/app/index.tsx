@@ -34,16 +34,16 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         showsHorizontalScrollIndicator={false}
       >
-        <ButtonTTAPP imageSource={require('../assets/images/BTTAPP01.jpg')} title="Animes" onPress={() => router.push('/(animes)')} />
+        <ButtonTTAPP imageSource={require('../assets/images/BTTAPP01.png')} title="Animes" onPress={() => router.push('/(animes)')} />
         <View style={styles.spacer} />
-        <ButtonTTAPP imageSource={require('../assets/images/BTTAPP02.jpg')} title="Finanças" onPress={() => router.push('/(finance)')} />
+        <ButtonTTAPP imageSource={require('../assets/images/BTTAPP02.png')} title="Finanças" onPress={() => router.push('/(finance)')} />
         <View style={styles.spacer} />
-        <ButtonTTAPP imageSource={require('../assets/images/BTTAPP03.jpg')} title="Mercado" onPress={() => router.push('/(market)')} />
+        <ButtonTTAPP imageSource={require('../assets/images/BTTAPP03.png')} title="Mercado" onPress={() => router.push('/(market)')} />
         <View style={styles.spacer} />
 
         <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', marginTop: 50 }}>
           <Text style={{ color: "white", fontSize: 10, fontWeight: 'bold' }}>Copyright © 2025 JRSAPP. Todos os direitos reservados.</Text>
-          <Text style={{ color: "white", fontSize: 8, fontWeight: 'bold' }}>By Jhonatanrs</Text>
+          <Text style={{ color: "white", fontSize: 8 }}>By Jhonatanrs</Text>
         </View>
 
       </ScrollView>

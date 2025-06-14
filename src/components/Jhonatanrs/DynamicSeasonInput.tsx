@@ -1,34 +1,31 @@
 import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle, useCallback } from 'react';
 import {
   StyleSheet,
-  View,
+  View, // Changed from ScrollView
   Text,
   TextInput,
-  ScrollView,
   KeyboardAvoidingView,
   Platform,
   ViewStyle,
   TextStyle,
-  TouchableOpacity, // Importar TouchableOpacity para o botão de remover/adicionar
+  TouchableOpacity,
+  Alert, // Make sure Alert is imported for any validation messages
 } from 'react-native';
 
 import Colors from '../../constants/Colors';
 import { useColorScheme } from '../../components/useColorScheme';
 
-// --- Interface para um item de temporada no estado local ---
 interface SeasonItem {
-  id: number; // ID único para o React key
-  value: string; // Valor do input (string, pois o TextInput retorna string)
+  id: number;
+  value: string;
 }
 
-// --- Ref type para o componente pai ---
 export interface DynamicSeasonInputRef {
-  getFilledSeasons: () => number[]; // Retorna apenas os números válidos
+  getFilledSeasons: () => number[];
   clearAllSeasons: () => void;
   setInitialSeasons: (values: number[]) => void;
 }
 
-// --- Props do componente ---
 interface DynamicSeasonInputProps {
   onChange: (seasons: number[]) => void;
   initialValues?: number[];
@@ -36,8 +33,8 @@ interface DynamicSeasonInputProps {
   textInputStyle?: TextStyle;
   labelStyle?: TextStyle;
   seasonContainerStyle?: ViewStyle;
-  addButtonStyle?: ViewStyle; // Novo estilo para o botão de adicionar
-  addButtonTextStyle?: TextStyle; // Novo estilo para o texto do botão de adicionar
+  addButtonStyle?: ViewStyle;
+  addButtonTextStyle?: TextStyle;
 }
 
 const DynamicSeasonInput = forwardRef<DynamicSeasonInputRef, DynamicSeasonInputProps>(
@@ -49,72 +46,60 @@ const DynamicSeasonInput = forwardRef<DynamicSeasonInputRef, DynamicSeasonInputP
     const colorScheme = useColorScheme() ?? 'light';
     const colors = Colors[colorScheme];
 
-    // --- Estado local para as temporadas ---
     const [seasons, setSeasons] = useState<SeasonItem[]>(() => {
-      // Inicializa o estado uma única vez na montagem inicial
       if (initialValues.length > 0) {
-        // Mapeia initialValues para SeasonItem, garantindo IDs únicos
         const initialSeasonItems = initialValues.map((val, index) => ({
-          id: index + 1, // IDs simples para começar
+          id: index + 1,
           value: String(val),
         }));
-        // Adiciona um campo vazio extra se o último valor inicial for válido (convenção de UI)
         const lastInitialValue = initialSeasonItems[initialSeasonItems.length - 1];
         if (lastInitialValue && parseInt(lastInitialValue.value) > 0) {
           initialSeasonItems.push({ id: initialSeasonItems.length + 1, value: '' });
         }
         return initialSeasonItems;
       }
-      return [{ id: 1, value: '' }]; // Estado inicial padrão
+      return [{ id: 1, value: '' }];
     });
 
-    const scrollViewRef = useRef<ScrollView | null>(null);
+    // Removed scrollViewRef as ScrollView is no longer used.
 
-    // --- Funções auxiliares para manipulação do estado ---
     const getNextId = useCallback(() => {
       return seasons.length > 0 ? Math.max(...seasons.map(s => s.id)) + 1 : 1;
     }, [seasons]);
 
     const getParsedValues = useCallback((items: SeasonItem[]): number[] => {
       return items
-        .filter(s => s.value !== '') // Remove campos vazios
+        .filter(s => s.value !== '')
         .map(s => parseInt(s.value))
-        .filter(value => !isNaN(value) && value > 0); // Remove NaN e valores <= 0
+        .filter(value => !isNaN(value) && value > 0);
     }, []);
 
-    // --- Efeito para notificar o componente pai sobre mudanças no estado interno ---
-    // Este useEffect é crucial para sincronizar o estado local com o pai
     useEffect(() => {
       const currentParsedValues = getParsedValues(seasons);
       onChange(currentParsedValues);
-    }, [seasons, onChange, getParsedValues]); // Depende de `seasons` para disparar sempre que o estado interno mudar
+    }, [seasons, onChange, getParsedValues]);
 
-    // --- Funções de manipulação de temporada ---
     const handleSeasonChange = useCallback((id: number, text: string) => {
-      const cleanedText = text.replace(/[^0-9]/g, ''); // Apenas números
+      const cleanedText = text.replace(/[^0-9]/g, '');
 
       setSeasons(prevSeasons => {
         let updatedSeasons = prevSeasons.map(season =>
           season.id === id ? { ...season, value: cleanedText } : season
         );
 
-        // Lógica para adicionar um novo campo vazio se o último campo preenchido tiver valor > 0
         const lastFilledIndex = updatedSeasons.reduce((acc, season, index) => {
           if (parseInt(season.value) > 0) return index;
           return acc;
         }, -1);
 
-        // Se o último campo preenchido não for o último campo na lista, remove os campos vazios após ele
         if (lastFilledIndex !== updatedSeasons.length - 1 && lastFilledIndex !== -1) {
           updatedSeasons = updatedSeasons.slice(0, lastFilledIndex + 1);
         }
 
-        // Sempre garante pelo menos um campo vazio no final se o último preenchido for válido
         const lastSeasonItem = updatedSeasons[updatedSeasons.length - 1];
         if (lastSeasonItem && parseInt(lastSeasonItem.value) > 0) {
           updatedSeasons.push({ id: getNextId(), value: '' });
         } else if (updatedSeasons.length === 0) {
-          // Se todos os campos forem removidos ou o array ficar vazio, adiciona um campo vazio
           updatedSeasons.push({ id: getNextId(), value: '' });
         }
 
@@ -125,11 +110,9 @@ const DynamicSeasonInput = forwardRef<DynamicSeasonInputRef, DynamicSeasonInputP
     const addSeasonInput = useCallback(() => {
       setSeasons(prevSeasons => {
         const lastSeason = prevSeasons[prevSeasons.length - 1];
-        // Adiciona um novo campo vazio APENAS se o último campo existente não estiver vazio E for válido
         if (lastSeason && parseInt(lastSeason.value) > 0) {
           return [...prevSeasons, { id: getNextId(), value: '' }];
         }
-        // Se o último campo estiver vazio ou inválido, não adiciona um novo
         return prevSeasons;
       });
     }, [getNextId]);
@@ -137,7 +120,6 @@ const DynamicSeasonInput = forwardRef<DynamicSeasonInputRef, DynamicSeasonInputP
     const removeSeasonInput = useCallback((id: number) => {
       setSeasons(prevSeasons => {
         const updatedSeasons = prevSeasons.filter(season => season.id !== id);
-        // Se remover todos os campos, garante que pelo menos um campo vazio exista
         if (updatedSeasons.length === 0) {
           return [{ id: getNextId(), value: '' }];
         }
@@ -145,16 +127,15 @@ const DynamicSeasonInput = forwardRef<DynamicSeasonInputRef, DynamicSeasonInputP
       });
     }, [getNextId]);
 
-    // --- Expondo métodos para o componente pai via ref ---
     useImperativeHandle(ref, () => ({
-      getFilledSeasons: () => getParsedValues(seasons), // Retorna apenas os valores numéricos válidos
+      getFilledSeasons: () => getParsedValues(seasons),
       clearAllSeasons: () => {
         const defaultState = [{ id: getNextId(), value: '' }];
         setSeasons(defaultState);
       },
       setInitialSeasons: (newInitialValues = []) => {
         if (newInitialValues && newInitialValues.length > 0) {
-          const initialSeasonItems = newInitialValues.map((val, index) => ({ id: getNextId() + index, value: String(val) })); // Garante IDs únicos
+          const initialSeasonItems = newInitialValues.map((val, index) => ({ id: getNextId() + index, value: String(val) }));
           const lastInitialValue = initialSeasonItems[initialSeasonItems.length - 1];
           if (lastInitialValue && parseInt(lastInitialValue.value) > 0) {
             initialSeasonItems.push({ id: getNextId() + initialSeasonItems.length, value: '' });
@@ -166,30 +147,21 @@ const DynamicSeasonInput = forwardRef<DynamicSeasonInputRef, DynamicSeasonInputP
       },
     }));
 
-    // Scrolla para o final quando um novo campo é adicionado
-    useEffect(() => {
-      // Pequeno atraso para garantir que o layout foi atualizado
-      const timer = setTimeout(() => {
-        scrollViewRef.current?.scrollToEnd({ animated: true });
-      }, 100);
-      return () => clearTimeout(timer);
-    }, [seasons.length]); // Dispara quando a quantidade de temporadas muda
+    // Removed useEffect for scrolling as ScrollView is no longer used.
 
     return (
       <KeyboardAvoidingView
         style={[styles.container, style]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <ScrollView
-          ref={scrollViewRef}
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollViewContent}
-          keyboardShouldPersistTaps="handled" // Permite tocar em outros elementos quando o teclado está aberto
+        <View // Changed from ScrollView
+          style={styles.contentContainer} // Using a simpler name, matching scrollViewContent
+          // Removed keyboardShouldPersistTaps
         >
           {seasons.map((season, index) => (
-            <View key={season.id} >
+            <View key={season.id}>
               <Text style={[styles.label, labelStyle, { color: colors.text }]}>Temporada {index + 1}:</Text>
-              <View style={[styles.seasonGroup, seasonContainerStyle, { backgroundColor: colors.inputBackground }]}>
+              <View style={[styles.seasonGroup, seasonContainerStyle, { backgroundColor: colors.inputBackground, height: 60 }]}>
                 <TextInput
                   style={[
                     styles.input,
@@ -205,9 +177,9 @@ const DynamicSeasonInput = forwardRef<DynamicSeasonInputRef, DynamicSeasonInputP
                   keyboardType="numeric"
                   placeholder={`Número de Episódios`}
                   placeholderTextColor={colors.text}
-                  onBlur={() => { /* A adição automática não é mais aqui, mas em handleSeasonChange ou botão */ }}
+                  onBlur={() => {}}
                 />
-                {seasons.length > 1 && ( // Permite remover se houver mais de uma temporada
+                {seasons.length > 1 && (
                   <TouchableOpacity
                     onPress={() => removeSeasonInput(season.id)}
                     style={[styles.removeButton, { backgroundColor: colors.error }]}
@@ -218,8 +190,16 @@ const DynamicSeasonInput = forwardRef<DynamicSeasonInputRef, DynamicSeasonInputP
               </View>
             </View>
           ))}
-
-        </ScrollView>
+          {/* If you still want an explicit 'Add' button after changing to View, you'll need to uncomment/re-add it here */}
+          {/*
+          <TouchableOpacity
+            onPress={addSeasonInput}
+            style={[styles.addButton, addButtonStyle, { backgroundColor: colors.tint }]}
+          >
+            <Text style={[styles.addButtonText, addButtonTextStyle]}>Adicionar Temporada</Text>
+          </TouchableOpacity>
+          */}
+        </View>
       </KeyboardAvoidingView>
     );
   }
@@ -230,45 +210,39 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
   },
-  scrollView: {
-    flex: 1,
-    width: '100%',
-  },
-  scrollViewContent: {
-    paddingBottom: 20, // Espaço para o botão de adicionar no final
+  contentContainer: { // Renamed from scrollViewContent, removed scrollView
+    flexGrow: 1, // To allow content to expand within KeyboardAvoidingView
+    paddingBottom: 20,
   },
   seasonGroup: {
-    flexDirection: 'row', // Botão e input na mesma linha
+    flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 15,
     padding: 0,
     borderRadius: 0,
     borderWidth: 0,
-    borderColor: '#ccc' // Padrão
-    // Removidos backgrounds hardcoded, use 'seasonContainerStyle'
+    borderColor: '#ccc'
   },
   label: {
     marginRight: 10,
-    minWidth: 80, // Espaço para "Temporada X:"
+    minWidth: 80,
     fontSize: 16,
     fontWeight: '500',
     marginBottom:10
-    // Removidos backgrounds hardcoded, use 'labelStyle'
   },
   input: {
-    flex: 1, // Ocupa o restante do espaço
-    height: 50,
+    flex: 1,
+    height: 60,
     paddingHorizontal: 15,
     borderRadius: 0,
     borderWidth: 0,
     fontSize: 16,
-    // Removidos backgrounds hardcoded, use 'textInputStyle'
   },
   removeButton: {
     backgroundColor:'red',
-    margin: 5,
-    width: 25,
-    height: 25,
+    margin: 20,
+    width: 30,
+    height: 30,
     borderRadius: 15,
     justifyContent: 'center',
     alignItems: 'center',
@@ -281,7 +255,7 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 8,
     alignItems: 'center',
-    marginTop: 10, // Espaço entre o último campo e o botão
+    marginTop: 10,
   },
   addButtonText: {
     color: 'white',
