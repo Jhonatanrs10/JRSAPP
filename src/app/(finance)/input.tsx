@@ -20,7 +20,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import Colors from '../../constants/Colors';
 import { useColorScheme } from '../../components/useColorScheme';
 import { useFocusEffect } from '@react-navigation/native';
-// import { FontAwesome } from '@expo/vector-icons'; // Não está sendo usado neste arquivo
+import DateTimePicker from '@react-native-community/datetimepicker'; // Import DateTimePicker
 
 type TipoTransacao = 'PIX' | 'Dinheiro' | 'Boleto' | 'Débito' | 'Crédito' | 'TED' | 'DOC' | 'Distinto';
 type Acao = 'entrada' | 'saida';
@@ -28,6 +28,7 @@ type Acao = 'entrada' | 'saida';
 interface Transacao {
   id: number;
   descricao: string;
+  caixa: string;
   categoria: string;
   quantidade: number;
   valor: number;
@@ -43,15 +44,21 @@ export default function Input() {
   const colors = Colors[colorScheme];
 
   const [descricao, setDescricao] = useState('');
+  const [caixa, setCaixa] = useState('');
   const [categoria, setCategoria] = useState('');
   const [quantidade, setQuantidade] = useState('1');
   const [valor, setValor] = useState('');
   const [tipoTransacao, setTipoTransacao] = useState<TipoTransacao>('PIX');
   const [acao, setAcao] = useState<Acao>('saida');
   const [data, setData] = useState('');
+  const [caixas, setCaixas] = useState<string[]>([]);
+  const [caixasFiltradas, setCaixasFiltradas] = useState<string[]>([]);
   const [categorias, setCategorias] = useState<string[]>([]);
   const [categoriasFiltradas, setCategoriasFiltradas] = useState<string[]>([]);
-  const [mostrarSugestoes, setMostrarSugestoes] = useState(false);
+  const [mostrarCategoria, setmostrarCategoria] = useState(false);
+  const [mostrarCaixa, setmostrarCaixa] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false); // New state for date picker visibility
+  const [selectedDateObject, setSelectedDateObject] = useState<Date>(new Date()); // New state to hold Date object for picker
 
   // Função para obter a data atual formatada
   const getTodayDate = useCallback(() => {
@@ -65,15 +72,18 @@ export default function Input() {
   // Função para limpar os campos e voltar ao modo Nova Transação
   const limparCampos = useCallback(() => {
     setDescricao('');
+    setCaixa('');
     setCategoria('');
     setQuantidade('1');
     setValor('');
     setTipoTransacao('PIX');
     setAcao('saida');
+    const today = new Date();
     setData(getTodayDate()); // Define a data para hoje ao limpar
+    setSelectedDateObject(today); // Also update the Date object
     // Limpa os parâmetros da rota
     router.setParams({});
-  }, [router, getTodayDate]); // Adicionar getTodayDate às dependências
+  }, [router, getTodayDate]);
 
   // Efeito para limpar campos quando a tab recebe foco
   useFocusEffect(
@@ -82,7 +92,7 @@ export default function Input() {
       if (!params.id) {
         limparCampos();
       }
-    }, [params.id, limparCampos]) // Adicionar limparCampos às dependências
+    }, [params.id, limparCampos])
   );
 
   // Efeito para carregar dados quando houver params.id
@@ -92,6 +102,7 @@ export default function Input() {
 
       // Carregar valores iniciais
       setDescricao(params.descricao as string);
+      setCaixa(params.caixa as string);
       setCategoria(params.categoria as string);
       setQuantidade(params.quantidade?.toString() ?? '');
 
@@ -103,11 +114,17 @@ export default function Input() {
       setTipoTransacao(params.tipo_transacao as TipoTransacao);
       setAcao(params.acao as Acao);
       setData(params.data as string);
+
+      // Set selectedDateObject from params.data
+      const [day, month, year] = (params.data as string).split('/').map(Number);
+      setSelectedDateObject(new Date(year, month - 1, day));
     } else {
-        // Se não houver params.id (nova transação), garanta que a data seja a de hoje
-        setData(getTodayDate());
+      // Se não houver params.id (nova transação), garanta que a data seja a de hoje
+      const today = new Date();
+      setData(getTodayDate());
+      setSelectedDateObject(today);
     }
-  }, [params.id, getTodayDate]); // Adicionar getTodayDate às dependências
+  }, [params.id, getTodayDate]);
 
 
   async function carregarCategorias() {
@@ -119,9 +136,19 @@ export default function Input() {
       console.error('Erro ao carregar categorias:', error);
     }
   }
+  async function carregarCaixas() {
+    try {
+      const resultado = await buscarTransacoes();
+      const caixasUnicas = [...new Set((resultado as Transacao[]).map(t => t.caixa))];
+      setCaixas(caixasUnicas);
+    } catch (error) {
+      console.error('Erro ao carregar caixas:', error);
+    }
+  }
 
   useEffect(() => {
     carregarCategorias();
+    carregarCaixas();
   }, []);
 
   function filtrarCategorias(texto: string) {
@@ -129,8 +156,17 @@ export default function Input() {
       cat.toLowerCase().includes(texto.toLowerCase())
     );
     setCategoriasFiltradas(filtradas);
-    setMostrarSugestoes(true);
+    setmostrarCategoria(true);
   }
+
+  function filtrarCaixas(texto: string) {
+    const filtradas = caixas.filter(cat =>
+      cat.toLowerCase().includes(texto.toLowerCase())
+    );
+    setCaixasFiltradas(filtradas);
+    setmostrarCaixa(true);
+  }
+
 
   // Função para formatar o valor ao digitar
   const handleValorChange = (text: string) => {
@@ -143,6 +179,14 @@ export default function Input() {
   const handleQuantidadeChange = (text: string) => {
     const numeros = text.replace(/\D/g, '');
     setQuantidade(numeros);
+  };
+
+  // Handler for DateTimePicker change event
+  const onDateChange = (event: any, selectedDate?: Date) => {
+    const currentDate = selectedDate || selectedDateObject;
+    setShowDatePicker(Platform.OS === 'ios'); // On iOS, keep picker open until explicitly closed
+    setSelectedDateObject(currentDate);
+    setData(formatarData(currentDate)); // Update the formatted date string
   };
 
   async function salvar() {
@@ -162,6 +206,7 @@ export default function Input() {
 
       const transacao = {
         descricao,
+        caixa,
         categoria,
         quantidade: Number(quantidade),
         valor: valorNumerico,
@@ -183,7 +228,8 @@ export default function Input() {
 
       Alert.alert('Sucesso', 'Transação salva com sucesso!');
       limparCampos();
-      router.push('/');
+      // Navigate to home and then back to clear navigation stack if needed
+      router.replace('/input');
     } catch (error) {
       console.error('Erro ao salvar:', error);
       Alert.alert('Erro', 'Não foi possível salvar a transação');
@@ -219,6 +265,86 @@ export default function Input() {
         </View>
 
         <View style={styles.inputContainer}>
+          <Text style={[styles.label, { color: colors.text }]}>Caixa</Text>
+          <View style={{ position: 'relative' }}>
+            <View style={[
+              styles.caixaInputContainer,
+              {
+                backgroundColor: colors.background,
+                borderColor: colors.borderColor,
+              }
+            ]}>
+              <ThemedInput
+                value={caixa}
+                onChangeText={(text) => {
+                  setCaixa(text);
+                  filtrarCaixas(text);
+                }}
+                onFocus={() => {
+                  setCaixasFiltradas(caixas);
+                  setmostrarCaixa(true);
+                }}
+                onBlur={() => {
+                  setTimeout(() => setmostrarCaixa(false), 200);
+                }}
+                placeholder="Digite ou selecione uma caixa"
+                placeholderTextColor={colors.text}
+                style={styles.caixaInput}
+              />
+              {caixa ? (
+                <TouchableOpacity
+                  onPress={() => {
+                    setCaixa('');
+                    setCaixasFiltradas(caixas);
+                  }}
+                  style={[styles.buttonInInput, { height: 60, backgroundColor: colors.inputBackground }]}
+                >
+                  <Text style={{ color: colors.text }}>✕</Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={[styles.sugestaoIcon, { height: 60, backgroundColor: colors.inputBackground }]}></View>
+              )}
+            </View>
+            {mostrarCaixa && caixasFiltradas.length > 0 && (
+              <View style={[
+                styles.sugestoesContainer,
+                {
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.borderColor,
+                  shadowColor: colors.text
+                }
+              ]}>
+                <FlatList
+                  data={caixasFiltradas}
+                  keyExtractor={(item) => item}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={[
+                        styles.sugestaoItem,
+                        {
+                          borderBottomColor: colors.borderColor,
+                          backgroundColor: item === caixa ? `${colors.info}20` : 'transparent'
+                        }
+                      ]}
+                      onPress={() => {
+                        setCaixa(item);
+                        setmostrarCaixa(false);
+                      }}
+                    >
+                      <Text style={{ color: colors.text }}>{item}</Text>
+                    </TouchableOpacity>
+                  )}
+                  style={styles.sugestoesList}
+                  keyboardShouldPersistTaps="handled"
+                  nestedScrollEnabled={true}
+                  scrollEnabled={false}
+                />
+              </View>
+            )}
+          </View>
+        </View>
+
+        <View style={styles.inputContainer}>
           <Text style={[styles.label, { color: colors.text }]}>Categoria</Text>
           <View style={{ position: 'relative' }}>
             <View style={[
@@ -236,10 +362,10 @@ export default function Input() {
                 }}
                 onFocus={() => {
                   setCategoriasFiltradas(categorias);
-                  setMostrarSugestoes(true);
+                  setmostrarCategoria(true);
                 }}
                 onBlur={() => {
-                  setTimeout(() => setMostrarSugestoes(false), 200);
+                  setTimeout(() => setmostrarCategoria(false), 200);
                 }}
                 placeholder="Digite ou selecione uma categoria"
                 placeholderTextColor={colors.text}
@@ -259,7 +385,7 @@ export default function Input() {
                 <View style={[styles.sugestaoIcon, { height: 60, backgroundColor: colors.inputBackground }]}></View>
               )}
             </View>
-            {mostrarSugestoes && categoriasFiltradas.length > 0 && (
+            {mostrarCategoria && categoriasFiltradas.length > 0 && (
               <View style={[
                 styles.sugestoesContainer,
                 {
@@ -282,7 +408,7 @@ export default function Input() {
                       ]}
                       onPress={() => {
                         setCategoria(item);
-                        setMostrarSugestoes(false);
+                        setmostrarCategoria(false);
                       }}
                     >
                       <Text style={{ color: colors.text }}>{item}</Text>
@@ -350,25 +476,38 @@ export default function Input() {
 
         <View style={styles.inputContainer}>
           <Text style={[styles.label, { color: colors.text }]}>Data</Text>
-          <ThemedInput
-            value={data}
-            onChangeText={(text) => {
-              const dataFormatada = formatarData(text);
-              setData(dataFormatada);
-            }}
-            placeholder="DD/MM/AAAA"
-            placeholderTextColor={colors.text}
-            keyboardType="numeric"
-            maxLength={10}
-          />
+          {/* Replaced ThemedInput with a TouchableOpacity to trigger the date picker */}
+          <TouchableOpacity onPress={() => setShowDatePicker(true)} style={[styles.dateInputButton, { borderColor: colors.borderColor, backgroundColor: colors.inputBackground }]}>
+            <Text style={[styles.dateInputText, { color: data ? colors.text : colors.text, backgroundColor: colors.inputBackground }]}>
+              {data || "Selecionar Data"}
+            </Text>
+          </TouchableOpacity>
+
+          {showDatePicker && (
+            <DateTimePicker
+              style={{ backgroundColor: colors.inputBackground }}
+              value={selectedDateObject}
+              mode="date"
+              display="default"
+              onChange={onDateChange}
+            />
+          )}
+
           <ButtonTT
-          buttonStyle={{marginTop: 10}}
-          title="Hoje"
-          onPress={() => setData(getTodayDate())} // Define a data para hoje
-          color={colors.info} // Use uma cor diferente, talvez 'info' ou 'primary'
-        />
+            buttonStyle={{ marginTop: 10 }}
+            title="Hoje"
+            onPress={() => {
+              const today = new Date();
+              setData(getTodayDate());
+              setSelectedDateObject(today);
+            }}
+            color={colors.info}
+          />
         </View>
+
       </ScrollView>
+
+      <View style={[styles.separator, { backgroundColor: colors.borderColor }]} />
 
       <View style={styles.buttonContainer}>
         {params.id && (
@@ -376,13 +515,16 @@ export default function Input() {
             title="Cancelar Edição"
             onPress={() => {
               limparCampos();
-              router.push('/');
+              router.replace('/input'); // Use replace to avoid stacking navigation
             }}
             color={colors.error}
           />
         )}
-        <View style={styles.spacer} />
-      
+        <ButtonTT
+          title={"Limpar"}
+          onPress={() => limparCampos()}
+          color={colors.info}
+        />
         <ButtonTT
           title={params.id ? "Salvar Alterações" : "Salvar"}
           onPress={salvar}
@@ -400,7 +542,7 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     flex: 1,
-    marginBottom: 30,
+    marginBottom: 10,
   },
   formContent: {
     paddingBottom: 20,
@@ -412,7 +554,7 @@ const styles = StyleSheet.create({
   },
   separator: {
     height: 1,
-    marginBottom: 20,
+    marginBottom: 10,
   },
   inputContainer: {
     marginBottom: 15,
@@ -439,6 +581,17 @@ const styles = StyleSheet.create({
     overflow: 'hidden'
   },
   categoriaInput: {
+    flex: 1,
+    borderWidth: 0,
+  },
+  caixaInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 0,
+    borderRadius: 0,
+    overflow: 'hidden'
+  },
+  caixaInput: {
     flex: 1,
     borderWidth: 0,
   },
@@ -475,4 +628,14 @@ const styles = StyleSheet.create({
     height: 60,
     borderBottomWidth: 1,
   },
+  dateInputButton: {
+    borderWidth: 0,
+    borderRadius: 0,
+    padding: 15,
+    minHeight: 60, // Ensure it matches ThemedInput height
+    justifyContent: 'center',
+  },
+  dateInputText: {
+    fontSize: 16,
+  }
 });

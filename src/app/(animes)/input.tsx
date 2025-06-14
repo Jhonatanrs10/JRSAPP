@@ -60,7 +60,7 @@ export default function AnimesInput() {
     setObservacao('');
     setLink('');
     if (dynamicInputRef.current) {
-        dynamicInputRef.current.clearAllSeasons();
+      dynamicInputRef.current.clearAllSeasons();
     }
     setDynamicSeasonsData([]);
     setAnimeSendoEditado(null);
@@ -86,14 +86,14 @@ export default function AnimesInput() {
                 if (dynamicInputRef.current && parsedSeasons instanceof Array) {
                   dynamicInputRef.current.setInitialSeasons(parsedSeasons);
                 } else {
-                    setDynamicSeasonsData([]);
+                  setDynamicSeasonsData([]);
                 }
               } catch (e) {
                 console.error("Erro ao fazer parse de seasons:", e);
                 setDynamicSeasonsData([]);
               }
             } else {
-                setDynamicSeasonsData([]);
+              setDynamicSeasonsData([]);
             }
           } else {
             Alert.alert('Erro', 'Anime não encontrado para edição.');
@@ -140,7 +140,7 @@ export default function AnimesInput() {
       }
 
       limparCampos();
-      router.push('/');
+      router.replace('/input');
     } catch (error) {
       console.error('Erro ao salvar/atualizar anime:', error);
       Alert.alert('Erro', 'Não foi possível salvar/atualizar o anime');
@@ -166,7 +166,7 @@ export default function AnimesInput() {
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      // keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0} // Este pode ser ajustado para um valor, ex: Header height
+      //keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 1} // Este pode ser ajustado para um valor, ex: Header height
     >
       <Text style={[styles.title, { color: colors.text }]}>
         {animeSendoEditado ? `Editar Anime (${animeSendoEditado.id})` : 'Novo Anime'}
@@ -204,7 +204,7 @@ export default function AnimesInput() {
         <View style={styles.inputContainer}>
           <Text style={[styles.label, { color: colors.text }]}>Dia de Lançamento</Text>
           <ThemedPicker
-            style={{color: colors.text}} // Use colors.text para consistência
+            style={{ color: colors.text }} // Use colors.text para consistência
             selectedValue={releaseDay}
             onValueChange={(itemValue) => setReleaseDay(itemValue as ReleaseDay)}
           >
@@ -244,7 +244,7 @@ export default function AnimesInput() {
             <TouchableOpacity
               onPress={handlePasteLink}
               onLongPress={() => setLink('')}
-              style={[styles.buttonInInput,{height: 60, backgroundColor: colors.inputBackground}]}
+              style={[styles.buttonInInput, { height: 60, backgroundColor: colors.inputBackground }]}
             >
               <FontAwesome name="paste" size={20} color={colors.info} />
             </TouchableOpacity>
@@ -273,20 +273,27 @@ export default function AnimesInput() {
             }}
           />
         </View>
+
       </ScrollView>
 
+      <View style={[styles.separator, { backgroundColor: colors.borderColor }]} />
       <View style={styles.buttonContainer}>
         {params.id && (
           <ButtonTT
             title="Cancelar Edição"
             onPress={() => {
               limparCampos();
-              router.push('/');
+              router.replace('/input');
             }}
             color={colors.error}
           />
         )}
-        <View style={styles.spacer} />
+
+        <ButtonTT
+          title={"Limpar"}
+          onPress={() => limparCampos()}
+          color={colors.info}
+        />
         <ButtonTT
           title={params.id ? "Salvar Alterações" : "Salvar"}
           onPress={salvarOuAtualizarAnime}
@@ -364,7 +371,8 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   buttonContainer: {
-     flexDirection: 'row',
+    //backgroundColor: 'red',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 10,
     marginBottom: 0,

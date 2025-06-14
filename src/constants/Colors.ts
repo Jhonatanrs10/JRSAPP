@@ -14,6 +14,7 @@ const Colors = {
     error: '#F44336',
     warning: '#FFC107',
     info: '#2196F3',
+    primary: '#2196F3',
     grade1: '#f2fcfe',
     grade2: '#1c92d2',
   },
@@ -34,6 +35,7 @@ const Colors = {
     error: '#E57373',
     warning: '#FFD54F',
     info: '#64B5F6',
+    primary: '#64B5F6',
     grade1: '#373B44',
     grade2: '#4286f4',
   }

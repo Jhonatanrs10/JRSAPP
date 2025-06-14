@@ -2,21 +2,23 @@ import { useState, useEffect, useCallback } from 'react';
 import { Button, Alert, StyleSheet, ScrollView, Platform } from 'react-native';
 import { Text, View } from '../../components/Themed';
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system'; // Corrected import
 import * as Sharing from 'expo-sharing';
 import * as Print from 'expo-print';
 import ButtonTT from '../../components/Jhonatanrs/ButtonTT';
-import { buscarTransacoes, salvarTransacao, recriarTabela } from '../../database/db'; // Supondo que salvarTransacao não precisa do ID
+import { buscarTransacoes, salvarTransacao, recriarTabela } from '../../database/db';
 import { formatarData } from '../../utils/formatacao';
 import Colors from '../../constants/Colors';
 import { useColorScheme } from '../../components/useColorScheme';
+import DateTimePicker from '@react-native-community/datetimepicker'; // Import for date picker
 
 type TipoTransacao = 'PIX' | 'Dinheiro' | 'Boleto' | 'Débito' | 'Crédito' | 'TED' | 'DOC' | 'Distinto';
 type Acao = 'entrada' | 'saida';
 
 type Transacao = {
-  id: number; // O ID virá do banco de dados ao salvar
+  id: number;
   descricao: string;
+  caixa: string;
   categoria: string;
   quantidade: number;
   valor: number; // Valor unitário em centavos
@@ -25,73 +27,184 @@ type Transacao = {
   data: string;
 };
 
-// Interface para o resumo por categoria exibido na tela
-interface CategoriaResumo {
-  maxGasto: number; // Armazenado em centavos (maior transação única de saída)
-  maxGanho: number; // Armazenado em centavos (maior transação única de entrada)
-  totalEntradasCategoria: number; // Total acumulado de entradas na categoria
-  totalSaidasCategoria: number;   // Total acumulado de saídas na categoria
+// Interface para o resumo por Categoria dentro de um Mês (e Caixa)
+interface CategoriaResumoDetalhe {
+  totalEntradasCategoria: number;
+  totalSaidasCategoria: number;
+}
+
+// Interface para o resumo por Mês dentro de uma Caixa
+interface MesResumoDetalhe {
+  totalEntradasMes: number; // Total geral de entradas para este mês nesta caixa
+  totalSaidasMes: number;   // Total geral de saídas para este mês nesta caixa
+  categorias: Record<string, CategoriaResumoDetalhe>; // Detalhes por categoria dentro deste mês
+}
+
+// Interface atualizada para o resumo por Caixa, incluindo o detalhe por Mês
+interface CaixaResumo {
+  totalEntradasCaixa: number; // Total acumulado de entradas na caixa (geral)
+  totalSaidasCaixa: number;   // Total acumulado de saídas na caixa (geral)
+  meses: Record<string, MesResumoDetalhe>; // Detalhes por mês dentro desta caixa
 }
 
 export default function Import() {
   const colorScheme = useColorScheme() ?? 'light';
-  const isDark = colorScheme === 'dark';
   const colors = Colors[colorScheme];
   const [importando, setImportando] = useState(false);
   const [exportando, setExportando] = useState(false);
-  const [resumoPorCategoria, setResumoPorCategoria] = useState<Record<string, CategoriaResumo>>({});
+  // Estado para armazenar o resumo por Caixa, que agora contém detalhes por mês e categoria
+  const [resumoPorCaixa, setResumoPorCaixa] = useState<Record<string, CaixaResumo>>({});
   const [carregandoResumo, setCarregandoResumo] = useState(false);
   const [valorAtual, setValorAtual] = useState(0); // Saldo geral em reais (após divisão por 100)
 
-  // --- Função para calcular o resumo e o valor atual ---
+  // New state variables for date filtering
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [showDatePickerStart, setShowDatePickerStart] = useState(false);
+  const [showDatePickerEnd, setShowDatePickerEnd] = useState(false);
+
+  // State to control if filters are applied, showing more details in the summary section
+  const [filtersApplied, setFiltersApplied] = useState(false);
+
+  // --- Função para calcular o valor atual total (sempre com todas as transações) ---
+  const calcularValorAtualTotal = useCallback(async () => {
+    try {
+      const allTransacoes = await buscarTransacoes() as Transacao[];
+      let totalEntradasGeral = 0;
+      let totalSaidasGeral = 0;
+
+      allTransacoes.forEach(t => {
+        const valorTotalTransacao = t.valor * t.quantidade;
+        if (t.acao === 'saida') {
+          totalSaidasGeral += valorTotalTransacao;
+        } else if (t.acao === 'entrada') {
+          totalEntradasGeral += valorTotalTransacao;
+        }
+      });
+      setValorAtual((totalEntradasGeral - totalSaidasGeral) / 100);
+    } catch (error) {
+      console.error('Erro ao calcular valor atual total:', error);
+      Alert.alert('Erro', 'Não foi possível calcular o valor atual.');
+    }
+  }, []);
+
+  // Effect to calculate total value on initial load and whenever data changes (implicit via calcularResumoDados if it's called)
+  useEffect(() => {
+    calcularValorAtualTotal();
+  }, [calcularValorAtualTotal]); // Recalculate if the function reference changes (unlikely for useCallback)
+
+
+  // --- Função para calcular o resumo por Caixa, Mês e Categoria (com filtro) ---
   const calcularResumoDados = useCallback(async () => {
     setCarregandoResumo(true);
     try {
-      const transacoes = await buscarTransacoes() as Transacao[];
-      const resumo: Record<string, CategoriaResumo> = {};
-      let totalEntradasGeral = 0; // Acumula em centavos
-      let totalSaidasGeral = 0;   // Acumula em centavos
+      const allTransacoes = await buscarTransacoes() as Transacao[];
+      let transacoes = allTransacoes;
+
+      // Determine if any date filter is applied for the *detailed summary*
+      const isDateFilterActive = startDate !== undefined || endDate !== undefined;
+      setFiltersApplied(isDateFilterActive); // Update the filter status for rendering
+
+      // Apply date filtering to the 'transacoes' array for the detailed summary
+      if (startDate && endDate) {
+        const endOfDay = new Date(endDate);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        transacoes = allTransacoes.filter(t => {
+          const [day, month, year] = t.data.split('/').map(Number);
+          const transactionDate = new Date(year, month - 1, day);
+
+          return transactionDate >= startDate && transactionDate <= endOfDay;
+        });
+      } else if (startDate) {
+        transacoes = allTransacoes.filter(t => {
+          const [day, month, year] = t.data.split('/').map(Number);
+          const transactionDate = new Date(year, month - 1, day);
+          return transactionDate >= startDate;
+        });
+      } else if (endDate) {
+        const endOfDay = new Date(endDate);
+        endOfDay.setHours(23, 59, 59, 999);
+        transacoes = allTransacoes.filter(t => {
+          const [day, month, year] = t.data.split('/').map(Number);
+          const transactionDate = new Date(year, month - 1, day);
+          return transactionDate <= endOfDay;
+        });
+      }
+
+      const resumoCaixas: Record<string, CaixaResumo> = {};
 
       transacoes.forEach(t => {
-        // Calcula o valor total da transação (valor unitário * quantidade) em centavos
         const valorTotalTransacao = t.valor * t.quantidade;
 
-        if (!resumo[t.categoria]) {
-          // Inicializa os totais e máximos para a nova categoria
-          resumo[t.categoria] = {
-            maxGasto: 0,
-            maxGanho: 0,
+        const dataPartes = t.data.split('/');
+        const mesAnoChave = `${dataPartes[1]}/${dataPartes[2]}`; // MM/AAAA
+
+        if (!resumoCaixas[t.caixa]) {
+          resumoCaixas[t.caixa] = {
+            totalEntradasCaixa: 0,
+            totalSaidasCaixa: 0,
+            meses: {} // Initialize months, even if not rendered initially
+          };
+        }
+
+        // Always accumulate totals for the specific box (general box total)
+        if (t.acao === 'saida') {
+          resumoCaixas[t.caixa].totalSaidasCaixa += valorTotalTransacao;
+        } else if (t.acao === 'entrada') {
+          resumoCaixas[t.caixa].totalEntradasCaixa += valorTotalTransacao;
+        }
+
+        // Populate detailed 'meses' and 'categorias' only if a filter is active
+        // This ensures the underlying data structure is ready if filtersApplied becomes true
+        // but it will only process this if it's relevant for rendering.
+        // The previous logic was correct, no need for the `if (filtersApplied)` here,
+        // because `filtersApplied` controls the rendering, not the data aggregation itself.
+        // The data aggregation should produce the full structure so `filtersApplied` can
+        // later decide what to show from that structure.
+
+        // 2. Inicializa o mês dentro da caixa se ele não existir
+        if (!resumoCaixas[t.caixa].meses[mesAnoChave]) {
+          resumoCaixas[t.caixa].meses[mesAnoChave] = {
+            totalEntradasMes: 0,
+            totalSaidasMes: 0,
+            categorias: {}
+          };
+        }
+
+        // Acumula os totais para o mês específico dentro da caixa
+        if (t.acao === 'saida') {
+          resumoCaixas[t.caixa].meses[mesAnoChave].totalSaidasMes += valorTotalTransacao;
+        } else if (t.acao === 'entrada') {
+          resumoCaixas[t.caixa].meses[mesAnoChave].totalEntradasMes += valorTotalTransacao;
+        }
+
+        // 3. Inicializa a categoria dentro do mês e da caixa se ela não existir
+        if (!resumoCaixas[t.caixa].meses[mesAnoChave].categorias[t.categoria]) {
+          resumoCaixas[t.caixa].meses[mesAnoChave].categorias[t.categoria] = {
             totalEntradasCategoria: 0,
             totalSaidasCategoria: 0
           };
         }
 
+        // Acumula os totais para a categoria específica dentro do mês e da caixa
         if (t.acao === 'saida') {
-          totalSaidasGeral += valorTotalTransacao;
-          resumo[t.categoria].totalSaidasCategoria += valorTotalTransacao; // Acumula total de saídas por categoria
-          if (valorTotalTransacao > resumo[t.categoria].maxGasto) {
-            resumo[t.categoria].maxGasto = valorTotalTransacao; // Mantém o máximo de uma transação única de saída
-          }
+          resumoCaixas[t.caixa].meses[mesAnoChave].categorias[t.categoria].totalSaidasCategoria += valorTotalTransacao;
         } else if (t.acao === 'entrada') {
-          totalEntradasGeral += valorTotalTransacao;
-          resumo[t.categoria].totalEntradasCategoria += valorTotalTransacao; // Acumula total de entradas por categoria
-          if (valorTotalTransacao > resumo[t.categoria].maxGanho) {
-            resumo[t.categoria].maxGanho = valorTotalTransacao; // Mantém o máximo de uma transação única de entrada
-          }
+          resumoCaixas[t.caixa].meses[mesAnoChave].categorias[t.categoria].totalEntradasCategoria += valorTotalTransacao;
         }
       });
-      setResumoPorCategoria(resumo);
-      // Converte o valor atual de centavos para reais antes de armazenar no estado
-      setValorAtual((totalEntradasGeral - totalSaidasGeral) / 100);
+      setResumoPorCaixa(resumoCaixas);
     } catch (error) {
       console.error('Erro ao calcular resumo:', error);
       Alert.alert('Erro', 'Não foi possível calcular o resumo dos dados.');
     } finally {
       setCarregandoResumo(false);
     }
-  }, []);
+  }, [startDate, endDate]); // Recalculate when dates change
 
-  // --- Efeito para carregar o resumo quando o componente é montado ---
+  // This effect ensures that the summary data (which can be filtered) is calculated
+  // when the component mounts or when the date filters change.
   useEffect(() => {
     calcularResumoDados();
   }, [calcularResumoDados]);
@@ -102,11 +215,7 @@ export default function Import() {
       setExportando(true);
       const transacoes = await buscarTransacoes() as Transacao[];
 
-      // Não precisamos ordenar por ID se ele não será exportado ou usado para ordenação de arquivo
-      // transacoes.sort((a, b) => a.id - b.id);
-
-      // NOVIDADE: O cabeçalho agora não inclui o ID
-      const cabecalho = 'Descrição;Categoria;Quantidade;Valor;Tipo;Ação;Data\n';
+      const cabecalho = 'Descrição;Caixa;Categoria;Quantidade;Valor;Tipo;Ação;Data\n';
 
       const linhas = transacoes.map(t => {
         const escapeAndQuote = (text: string | number | null) => {
@@ -120,8 +229,7 @@ export default function Import() {
           return String(displayValue);
         };
 
-        // NOVIDADE: A linha exportada não inclui o ID
-        return `${escapeAndQuote(t.descricao)};${escapeAndQuote(t.categoria)};${escapeAndQuote(t.quantidade)};${escapeAndQuote(t.valor)};${escapeAndQuote(t.tipo_transacao)};${escapeAndQuote(t.acao)};${escapeAndQuote(t.data)}`;
+        return `${escapeAndQuote(t.descricao)};${escapeAndQuote(t.caixa)};${escapeAndQuote(t.categoria)};${escapeAndQuote(t.quantidade)};${escapeAndQuote(t.valor)};${escapeAndQuote(t.tipo_transacao)};${escapeAndQuote(t.acao)};${escapeAndQuote(t.data)}`;
       });
 
       const conteudo = cabecalho + linhas.join('\n');
@@ -183,12 +291,11 @@ export default function Import() {
       const cabecalhoLinha = linhas[0].trim();
       const cabecalho = cabecalhoLinha.split(';').map(h => h.trim());
 
-      // Campos essenciais para importação (ID não é necessário nem na validação)
-      const camposEssenciais = ['Descrição', 'Categoria', 'Quantidade', 'Valor', 'Tipo', 'Ação', 'Data'];
+      const camposEssenciais = ['Descrição', 'Caixa', 'Categoria', 'Quantidade', 'Valor', 'Tipo', 'Ação', 'Data'];
       const camposMinimosValidos = camposEssenciais.every(campo => cabecalho.includes(campo));
 
       if (!camposMinimosValidos) {
-        Alert.alert('Erro', 'Formato de arquivo inválido. Verifique se o arquivo tem os campos essenciais: Descrição, Categoria, Quantidade, Valor, Tipo, Ação, Data.');
+        Alert.alert('Erro', 'Formato de arquivo inválido. Verifique se o arquivo tem os campos essenciais: Descrição, Caixa, Categoria, Quantidade, Valor, Tipo, Ação, Data.');
         return;
       }
 
@@ -267,9 +374,9 @@ export default function Import() {
 
           const valorParsed = parseFloat(valores[cabecalho.indexOf('Valor')]);
 
-          // Cria a transação sem o ID. O banco de dados irá gerar um novo.
           const transacao: Omit<Transacao, 'id'> = {
             descricao: valores[cabecalho.indexOf('Descrição')],
+            caixa: valores[cabecalho.indexOf('Caixa')],
             categoria: valores[cabecalho.indexOf('Categoria')],
             quantidade: parseInt(valores[cabecalho.indexOf('Quantidade')]),
             valor: valorParsed,
@@ -282,7 +389,7 @@ export default function Import() {
             throw new Error('Quantidade ou Valor não são números válidos.');
           }
 
-          await salvarTransacao(transacao); // Salva sem especificar o ID
+          await salvarTransacao(transacao);
           importadas++;
         } catch (error: unknown) {
           console.error('Erro ao importar transação:', error, 'Linha:', linhas[i]);
@@ -301,7 +408,8 @@ export default function Import() {
         'Importação Concluída',
         `Importadas: ${importadas}\nErros: ${erros}`
       );
-      calcularResumoDados(); // Recalcula resumo após importação
+      calcularResumoDados(); // Recalculate filtered summary
+      calcularValorAtualTotal(); // Recalculate total value
     } catch (error: unknown) {
       console.error('Erro geral ao importar:', error);
       let errorMessage = 'Não foi possível importar as transações. Verifique se o arquivo está no formato correto.';
@@ -322,22 +430,15 @@ export default function Import() {
       let erros = 0;
 
       const dadosTeste = [
-        { descricao: "Venda de Produto 1", categoria: "Vendas", quantidade: 2, valor: 15000, tipo_transacao: "PIX", acao: "entrada", data: formatarData(new Date()) }, // 150.00
-        { descricao: "Compra de Material", categoria: "Materiais", quantidade: 5, valor: 2550, tipo_transacao: "Débito", acao: "saida", data: formatarData(new Date()) },    // 25.50
-        { descricao: "Serviço de Consultoria", categoria: "Serviços", quantidade: 1, valor: 50075, tipo_transacao: "Crédito", acao: "entrada", data: formatarData(new Date()) }, // 500.75
-        { descricao: "Almoço", categoria: "Alimentação", quantidade: 1, valor: 3500, tipo_transacao: "Dinheiro", acao: "saida", data: formatarData(new Date()) },       // 35.00
-        { descricao: "Bônus de Desempenho", categoria: "Salário", quantidade: 1, valor: 100000, tipo_transacao: "PIX", acao: "entrada", data: formatarData(new Date()) }, // 1000.00
-        { descricao: "Manutenção do Carro", categoria: "Transporte", quantidade: 1, valor: 45000, tipo_transacao: "Débito", acao: "saida", data: formatarData(new Date()) }, // 450.00
-        { descricao: "Devolução de Compra", categoria: "Compras", quantidade: 1, valor: 12000, tipo_transacao: "Crédito", acao: "entrada", data: formatarData(new Date()) }, // 120.00
-        { descricao: "Mercado Mensal", categoria: "Alimentação", quantidade: 1, valor: 80000, tipo_transacao: "Débito", acao: "saida", data: formatarData(new Date()) },  // 800.00
-        { descricao: "Freelance Design", categoria: "Serviços", quantidade: 1, valor: 70000, tipo_transacao: "PIX", acao: "entrada", data: formatarData(new Date()) },   // 700.00
-        // Adicionando mais transações com datas de meses diferentes para teste
-        { descricao: "Venda de Livro", categoria: "Vendas", quantidade: 1, valor: 8000, tipo_transacao: "PIX", acao: "entrada", data: formatarData(new Date(2025, 0, 15)) }, // Janeiro 2025
-        { descricao: "Conta de Luz", categoria: "Contas Fixas", quantidade: 1, valor: 12000, tipo_transacao: "Débito", acao: "saida", data: formatarData(new Date(2025, 0, 20)) }, // Janeiro 2025
-        { descricao: "Academia", categoria: "Saúde", quantidade: 1, valor: 9000, tipo_transacao: "Crédito", acao: "saida", data: formatarData(new Date(2025, 1, 5)) }, // Fevereiro 2025
-        { descricao: "Consultoria TI", categoria: "Serviços", quantidade: 1, valor: 150000, tipo_transacao: "PIX", acao: "entrada", data: formatarData(new Date(2025, 1, 10)) }, // Fevereiro 2025
-        { descricao: "Aluguel", categoria: "Moradia", quantidade: 1, valor: 200000, tipo_transacao: "PIX", acao: "saida", data: formatarData(new Date(2025, 2, 1)) }, // Março 2025
-        { descricao: "Bônus Anual", categoria: "Salário", quantidade: 1, valor: 300000, tipo_transacao: "Crédito", acao: "entrada", data: formatarData(new Date(2025, 2, 25)) }, // Março 2025
+        { descricao: "Produto 1", caixa: "Pai", categoria: "Contas", quantidade: 2, valor: 15000, tipo_transacao: "PIX", acao: "saida", data: formatarData(new Date()) },
+        { descricao: "Salário", caixa: "Pai", categoria: "Renda", quantidade: 1, valor: 500000, tipo_transacao: "PIX", acao: "entrada", data: formatarData(new Date()) },
+        { descricao: "Aluguel", caixa: "Pai", categoria: "Moradia", quantidade: 1, valor: 120000, tipo_transacao: "Boleto", acao: "saida", data: formatarData(new Date()) },
+        { descricao: "Lanche", caixa: "Filho", categoria: "Alimentação", quantidade: 1, valor: 2500, tipo_transacao: "Dinheiro", acao: "saida", data: formatarData(new Date()) },
+        { descricao: "Venda Extra", caixa: "Filho", categoria: "Renda Extra", quantidade: 1, valor: 7500, tipo_transacao: "Débito", acao: "entrada", data: formatarData(new Date()) },
+        { descricao: "Supermercado", caixa: "Mãe", categoria: "Alimentação", quantidade: 1, valor: 30000, tipo_transacao: "Crédito", acao: "saida", data: formatarData(new Date()) },
+        { descricao: "Presente", caixa: "Mãe", categoria: "Lazer", quantidade: 1, valor: 5000, tipo_transacao: "Dinheiro", acao: "entrada", data: formatarData(new Date()) },
+        { descricao: "Conta de Luz", caixa: "Pai", categoria: "Contas", quantidade: 1, valor: 8000, tipo_transacao: "Boleto", acao: "saida", data: formatarData(new Date('2025-05-15')) }, // Mês anterior
+        { descricao: "Receita Antiga", caixa: "Filho", categoria: "Renda", quantidade: 1, valor: 10000, tipo_transacao: "PIX", acao: "entrada", data: formatarData(new Date('2025-05-20')) }, // Mês anterior
       ];
 
       for (const transacao of dadosTeste) {
@@ -360,7 +461,8 @@ export default function Import() {
         'Importação de Teste Concluída',
         `Importadas: ${importadas}\nErros: ${erros}`
       );
-      calcularResumoDados(); // Recalcula resumo após importação de teste
+      calcularResumoDados(); // Recalculate filtered summary
+      calcularValorAtualTotal(); // Recalculate total value
     } catch (error: unknown) {
       console.error('Erro geral ao importar dados de teste:', error);
       let errorMessage = 'Não foi possível importar os dados de teste.';
@@ -392,7 +494,8 @@ export default function Import() {
               } else {
                 Alert.alert('Erro', 'Não foi possível limpar o banco de dados');
               }
-              calcularResumoDados(); // Recalcula resumo após limpar o BD
+              calcularResumoDados(); // Recalculate filtered summary
+              calcularValorAtualTotal(); // Recalculate total value
             } catch (error: unknown) {
               console.error('Erro ao limpar banco de dados:', error);
               let errorMessage = 'Ocorreu um erro ao limpar o banco de dados.';
@@ -409,12 +512,39 @@ export default function Import() {
     );
   }
 
-  // --- Função para gerar dados para o relatório (agrupamento por mês, categoria, tipo) ---
+  // --- Função para gerar dados para o relatório (agrupamento por mês, caixa, categoria) ---
   const gerarDadosParaRelatorio = useCallback(async () => {
-    const transacoes = await buscarTransacoes() as Transacao[];
+    const allTransacoes = await buscarTransacoes() as Transacao[];
+    let transacoes = allTransacoes;
+
+    // Apply date filtering for the report as well
+    if (startDate && endDate) {
+      const endOfDay = new Date(endDate);
+      endOfDay.setHours(23, 59, 59, 999); // Include the entire end date
+      transacoes = allTransacoes.filter(t => {
+        const [day, month, year] = t.data.split('/').map(Number);
+        const transactionDate = new Date(year, month - 1, day);
+        return transactionDate >= startDate && transactionDate <= endOfDay;
+      });
+    } else if (startDate) { // If only start date is provided
+      transacoes = allTransacoes.filter(t => {
+        const [day, month, year] = t.data.split('/').map(Number);
+        const transactionDate = new Date(year, month - 1, day);
+        return transactionDate >= startDate;
+      });
+    } else if (endDate) { // If only end date is provided
+      const endOfDay = new Date(endDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      transacoes = allTransacoes.filter(t => {
+        const [day, month, year] = t.data.split('/').map(Number);
+        const transactionDate = new Date(year, month - 1, day);
+        return transactionDate <= endOfDay;
+      });
+    }
+
 
     const resumoMensal: Record<string, Record<string, {
-      combinacoes: Record<string, { categoria: string; tipoTransacao: TipoTransacao; totalEntradas: number; totalSaidas: number; }>;
+      combinacoes: Record<string, { caixa: string; categoria: string; totalEntradas: number; totalSaidas: number; }>; // Alterado para caixa e categoria
       totalEntradasMes: number;
       totalSaidasMes: number;
     }>> = {};
@@ -423,9 +553,10 @@ export default function Import() {
       const valorTotalTransacao = t.valor * t.quantidade;
 
       const [_, mes, ano] = t.data.split('/');
-      const chaveMesAno = `${ano}-${mes}`;
+      const chaveMesAno = `${ano}-${mes}`; // Changed to YYYY-MM for consistent sorting
 
-      const chaveCombinacao = `${t.categoria}:::${t.tipo_transacao}`;
+      // Nova chave de combinação: Caixa e Categoria
+      const chaveCombinacao = `${t.caixa}:::${t.categoria}`;
 
       if (!resumoMensal[ano]) {
         resumoMensal[ano] = {};
@@ -446,8 +577,8 @@ export default function Import() {
 
       if (!resumoMensal[ano][chaveMesAno].combinacoes[chaveCombinacao]) {
         resumoMensal[ano][chaveMesAno].combinacoes[chaveCombinacao] = {
-          categoria: t.categoria,
-          tipoTransacao: t.tipo_transacao,
+          caixa: t.caixa, // Armazena a caixa
+          categoria: t.categoria, // Armazena a categoria
           totalEntradas: 0,
           totalSaidas: 0
         };
@@ -460,18 +591,20 @@ export default function Import() {
     });
 
     return { resumoMensal };
-  }, []);
+  }, [startDate, endDate]); // Add startDate and endDate to dependency array
 
   // --- Função para gerar conteúdo HTML do relatório PDF ---
   const gerarConteudoHtmlRelatorio = useCallback(async () => {
     const { resumoMensal } = await gerarDadosParaRelatorio();
-    const dataGeracao = new Date().toLocaleDateString('pt-BR');
+    // Removed timeStyle from toLocaleDateString as it's not supported by this method.
+    // If time is needed, use toLocaleString or toLocaleTimeString separately.
+    const dataGeracao = new Date().toLocaleDateString('pt-BR', { dateStyle: 'short' });
 
     let htmlContent = `
       <html>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
-        <title>Relatório Financeiro</title>
+        <title>Relatório</title>
         <style>
           body { font-family: Arial, sans-serif; margin: 20px; }
           h1, h2, h3 { color: #333; text-align: center; margin-bottom: 10px; }
@@ -501,11 +634,19 @@ export default function Import() {
         </style>
       </head>
       <body>
-        <h1>Relatório Financeiro Detalhado</h1>
+        <h1>Relatório Detalhado</h1>
         <p style="text-align: center;">Gerado em: ${dataGeracao}</p>
     `;
 
-    const meses = [
+    // Add filter period to report title if present
+    if (startDate || endDate) {
+      const startText = startDate ? formatarData(startDate) : 'Início';
+      const endText = endDate ? formatarData(endDate) : 'Fim';
+      htmlContent += `<p style="text-align: center;">Período: ${startText} a ${endText}</p>`;
+    }
+
+
+    const mesesNomes = [
       "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
       "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
     ];
@@ -513,7 +654,7 @@ export default function Import() {
     const anosOrdenados = Object.keys(resumoMensal).sort();
 
     if (anosOrdenados.length === 0) {
-      htmlContent += `<p style="text-align: center;">Nenhum dado disponível para o relatório.</p>`;
+      htmlContent += `<p style="text-align: center;">Nenhum dado disponível para o relatório no período selecionado.</p>`;
     } else {
       anosOrdenados.forEach(ano => {
         htmlContent += `
@@ -521,12 +662,18 @@ export default function Import() {
             <h2>Ano: ${ano}</h2>
         `;
 
-        const mesesDoAnoOrdenados = Object.keys(resumoMensal[ano]).sort();
+        const mesesDoAnoOrdenados = Object.keys(resumoMensal[ano]).sort((a, b) => {
+          // Sort by YYYY-MM format
+          const [anoA, mesA] = a.split('-');
+          const [anoB, mesB] = b.split('-');
+          if (anoA !== anoB) return parseInt(anoA) - parseInt(anoB);
+          return parseInt(mesA) - parseInt(mesB);
+        });
 
         mesesDoAnoOrdenados.forEach(chaveMesAno => {
-          const [_, mesNumeroStr] = chaveMesAno.split('-');
+          const [anoStrMes, mesNumeroStr] = chaveMesAno.split('-'); // Changed to YYYY-MM
           const mesIndex = parseInt(mesNumeroStr, 10) - 1;
-          const nomeMes = meses[mesIndex];
+          const nomeMes = mesesNomes[mesIndex];
 
           const dadosMes = resumoMensal[ano][chaveMesAno];
           const entradasMesReais = (dadosMes.totalEntradasMes / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -535,17 +682,17 @@ export default function Import() {
 
           htmlContent += `
             <div class="subsection">
-              <h3>Mês: ${nomeMes} - ${ano}</h3>
+              <h3>Mês: ${nomeMes}/${anoStrMes}</h3>
               <p style="font-weight: bold;">Total Entradas do Mês: <span class="entry">${entradasMesReais}</span></p>
               <p style="font-weight: bold;">Total Saídas do Mês: <span class="exit">${saidasMesReais}</span></p>
               <p style="font-weight: bold;">Saldo do Mês: <span class="balance">${saldoMesReais}</span></p>
 
-              <h4>Detalhes por Categoria e Tipo de Transação</h4>
+              <h4>Detalhes por Caixa e Categoria</h4>
               <table>
                 <thead>
                   <tr>
+                    <th>Caixa</th>
                     <th>Categoria</th>
-                    <th>Tipo de Transação</th>
                     <th>Entradas</th>
                     <th>Saídas</th>
                     <th>Saldo</th>
@@ -554,35 +701,37 @@ export default function Import() {
                 <tbody>
           `;
 
-          type CategoriaTipoItem = {
+          // Novo tipo para os itens da tabela do PDF (Caixa e Categoria)
+          type CaixaCategoriaItem = {
+            caixa: string;
             categoria: string;
-            tipoTransacao: TipoTransacao;
             totalEntradas: number;
             totalSaidas: number;
           };
 
-          const categoriaTipoItens: CategoriaTipoItem[] = Object.values(dadosMes.combinacoes);
+          const caixaCategoriaItens: CaixaCategoriaItem[] = Object.values(dadosMes.combinacoes);
 
-          categoriaTipoItens.sort((a, b) => {
-            const categoriaCompare = a.categoria.localeCompare(b.categoria);
-            if (categoriaCompare !== 0) {
-              return categoriaCompare;
+          // Ordenar por Caixa e depois por Categoria
+          caixaCategoriaItens.sort((a, b) => {
+            const caixaCompare = a.caixa.localeCompare(b.caixa);
+            if (caixaCompare !== 0) {
+              return caixaCompare;
             }
-            return a.tipoTransacao.localeCompare(b.tipoTransacao);
+            return a.categoria.localeCompare(b.categoria);
           });
 
-          if (categoriaTipoItens.length === 0) {
+          if (caixaCategoriaItens.length === 0) {
             htmlContent += `<tr><td colspan="5">Nenhum detalhe disponível para este mês.</td></tr>`;
           } else {
-            categoriaTipoItens.forEach(item => {
+            caixaCategoriaItens.forEach(item => {
               const entradasReais = (item.totalEntradas / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
               const saidasReais = (item.totalSaidas / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
               const saldoReais = ((item.totalEntradas - item.totalSaidas) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
               htmlContent += `
                 <tr>
+                  <td>${item.caixa}</td>
                   <td>${item.categoria}</td>
-                  <td>${item.tipoTransacao}</td>
                   <td class="entry">${entradasReais}</td>
                   <td class="exit">${saidasReais}</td>
                   <td class="balance">${saldoReais}</td>
@@ -602,14 +751,15 @@ export default function Import() {
 
     htmlContent += `
         <div class="footer">
-          <p>Relatório gerado pelo seu aplicativo financeiro.</p>
+          <p>Relatório gerado pelo aplicativo JRSAPP.</p>
+          <p>By Jhonatanrs</p>
         </div>
       </body>
       </html>
     `;
 
     return htmlContent;
-  }, []);
+  }, [gerarDadosParaRelatorio]); // Dependency on the data generation function
 
   // --- Função para gerar o relatório PDF ---
   async function gerarRelatorioPdf() {
@@ -635,12 +785,15 @@ export default function Import() {
     }
   }
 
+  const mesesNomes = [
+    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+  ];
 
   return (
     <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={[styles.container, { backgroundColor: colors.background }]}>
       <Text style={[styles.title, { color: colors.text }]}>Ferramentas</Text>
       <View style={[styles.separator, { backgroundColor: colors.borderColor }]} />
-
 
       <ButtonTT
         buttonStyle={{ marginVertical: 5 }}
@@ -659,23 +812,86 @@ export default function Import() {
 
 
 
-      <ButtonTT
-        buttonStyle={{ marginVertical: 5 }}
-        title="Gerar Relatório PDF"
-        onPress={gerarRelatorioPdf}
-        disabled={exportando}
-        color={'#007bff'}
-      />
-
 
 
       <View style={[styles.separator, { backgroundColor: colors.borderColor }]} />
-      <Text style={[styles.subtitle, { color: colors.text }]}>Resumo Financeiro</Text>
+      <Text style={[styles.subtitle, { color: colors.text }]}>Filtro por Período</Text>
       <View style={[styles.separator, { backgroundColor: colors.borderColor }]} />
+
+      <View style={styles.dateFilterContainer}>
+        <View style={styles.datePickerRow}>
+          <Text style={[styles.dateLabel, { color: colors.text }]}>De:</Text>
+          <ButtonTT
+            title={startDate ? formatarData(startDate) : "Selecionar Data Inicial"}
+            onPress={() => setShowDatePickerStart(true)}
+            color={colors.primary}
+            buttonStyle={styles.datePickerButton}
+          />
+        </View>
+        {showDatePickerStart && (
+          <DateTimePicker
+            value={startDate || new Date()}
+            mode="date"
+            display="default"
+            onChange={(event, selectedDate) => {
+              setShowDatePickerStart(Platform.OS === 'ios');
+              setStartDate(selectedDate || undefined); // Set to undefined if null/undefined
+            }}
+          />
+        )}
+
+        <View style={styles.datePickerRow}>
+          <Text style={[styles.dateLabel, { color: colors.text }]}>Até:</Text>
+          <ButtonTT
+            title={endDate ? formatarData(endDate) : "Selecionar Data Final"}
+            onPress={() => setShowDatePickerEnd(true)}
+            color={colors.primary}
+            buttonStyle={styles.datePickerButton}
+          />
+        </View>
+        {showDatePickerEnd && (
+          <DateTimePicker
+            value={endDate || new Date()}
+            mode="date"
+            display="default"
+            onChange={(event, selectedDate) => {
+              setShowDatePickerEnd(Platform.OS === 'ios');
+              setEndDate(selectedDate || undefined); // Set to undefined if null/undefined
+            }}
+          />
+        )}
+        <ButtonTT
+          buttonStyle={{ marginVertical: 10 }}
+          title="Aplicar Filtro"
+          onPress={calcularResumoDados} // Recalculate summary with new dates
+          disabled={carregandoResumo}
+          color={colors.info}
+        />
+        <ButtonTT
+          buttonStyle={{ marginVertical: 5 }}
+          title="Limpar Filtro"
+          onPress={() => {
+            setStartDate(undefined);
+            setEndDate(undefined);
+            // After clearing filters, recalculate and set filtersApplied to false
+            setFiltersApplied(false);
+            calcularResumoDados(); // Recalculate summary to show overall box totals again
+          }}
+          color={colors.warning}
+        />
+
+        <ButtonTT
+          buttonStyle={{ marginVertical: 5 }}
+          title="Gerar Relatório PDF"
+          onPress={gerarRelatorioPdf}
+          disabled={exportando}
+          color={'#007bff'}
+        />
+      </View>
 
       <View style={styles.resumoGeralContainer}>
         <Text style={[styles.resumoGeralLabel, { color: colors.text }]}>
-          Valor Atual:
+          Valor Atual (Total):
         </Text>
         <Text
           style={[
@@ -687,54 +903,97 @@ export default function Import() {
         </Text>
       </View>
 
-      <View style={[styles.separator, { backgroundColor: colors.borderColor }]} />
-      <ButtonTT
-        title="Resumo por Categoria"
-        onPress={calcularResumoDados}
-        disabled={carregandoResumo}
-        color={colors.info}
-      />
-
-      <View style={[styles.separator, { backgroundColor: colors.borderColor }]} />
-
       {carregandoResumo ? (
         <Text style={{ color: colors.text }}>Calculando resumo...</Text>
       ) : (
         <>
-          {Object.keys(resumoPorCategoria).length > 0 ? (
-            Object.entries(resumoPorCategoria)
-              .sort(([catA], [catB]) => catA.localeCompare(catB))
-              .map(([categoria, dados]) => (
-                <View key={categoria} style={styles.resumoItem}>
-                  <Text style={[styles.resumoCategoria, { color: colors.text }]}>
-                    {categoria}:
+          {Object.keys(resumoPorCaixa).length > 0 ? (
+            Object.entries(resumoPorCaixa)
+              .sort(([caixaA], [caixaB]) => caixaA.localeCompare(caixaB))
+              .map(([caixa, dadosCaixa]) => (
+                <View key={caixa} style={styles.resumoCaixaContainer}>
+                  <Text style={[styles.resumoCaixaTitulo, { color: colors.text }]}>
+                    Caixa: {caixa}
                   </Text>
-                  <Text style={[styles.resumoValor, { color: colors.text }]}>
-                    Total Entradas: {(dados.totalEntradasCategoria / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  <Text style={[styles.resumoValorGeral, { color: colors.text }]}>
+                    Total Geral Entradas na Caixa: {(dadosCaixa.totalEntradasCaixa / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                   </Text>
-                  <Text style={[styles.resumoValor, { color: colors.text }]}>
-                    Total Saídas: {(dados.totalSaidasCategoria / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  <Text style={[styles.resumoValorGeral, { color: colors.text }]}>
+                    Total Geral Saídas na Caixa: {(dadosCaixa.totalSaidasCaixa / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                   </Text>
-                  <Text style={[styles.resumoValor, { color: colors.text }]}>
-                    Saldo Atual: {((dados.totalEntradasCategoria - dados.totalSaidasCategoria) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  <Text style={[styles.resumoValorGeral, { color: colors.text }]}>
+                    Saldo Geral da Caixa: {((dadosCaixa.totalEntradasCaixa - dadosCaixa.totalSaidasCaixa) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                   </Text>
+
+
+                  {filtersApplied && (
+                    <>
+                      {Object.entries(dadosCaixa.meses)
+                        .sort(([mesAnoA], [mesAnoB]) => {
+                          // Ordena os meses (MM/AAAA) cronologicamente
+                          const [mesA, anoA] = mesAnoA.split('/');
+                          const [mesB, anoB] = mesAnoB.split('/');
+                          if (anoA !== anoB) return parseInt(anoA) - parseInt(anoB);
+                          return parseInt(mesA) - parseInt(mesB);
+                        })
+                        .map(([mesAnoChave, dadosMes]) => {
+                          const [mesNumeroStr, anoStr] = mesAnoChave.split('/');
+                          const nomeMes = mesesNomes[parseInt(mesNumeroStr, 10) - 1]; // Converte o número do mês para nome
+
+                          return (
+                            <View key={`${caixa}-${mesAnoChave}`} style={styles.resumoMesContainer}>
+                              <Text style={[styles.resumoMesTitulo, { color: colors.text }]}>
+                                Mês: {nomeMes}/{anoStr}
+                              </Text>
+                              <Text style={[styles.resumoValorMes, { color: colors.text }]}>
+                                Total Entradas no Mês: {(dadosMes.totalEntradasMes / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                              </Text>
+                              <Text style={[styles.resumoValorMes, { color: colors.text }]}>
+                                Total Saídas no Mês: {(dadosMes.totalSaidasMes / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                              </Text>
+                              <Text style={[styles.resumoValorMes, { color: colors.text }]}>
+                                Saldo no Mês: {((dadosMes.totalEntradasMes - dadosMes.totalSaidasMes) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                              </Text>
+
+                              <View style={[styles.linhaDivisoriaInterna, { backgroundColor: colors.borderColor }]} />
+
+
+                              {Object.entries(dadosMes.categorias)
+                                .sort(([catA], [catB]) => catA.localeCompare(catB))
+                                .map(([categoria, dadosCategoria]) => (
+                                  <View key={`${caixa}-${mesAnoChave}-${categoria}`} style={styles.resumoCategoriaItem}>
+                                    <Text style={[styles.resumoCategoriaNome, { color: colors.text }]}>
+                                      - {categoria}:
+                                    </Text>
+                                    <Text style={[styles.resumoValor, { color: colors.text }]}>
+                                      Total Entradas: {(dadosCategoria.totalEntradasCategoria / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                    </Text>
+                                    <Text style={[styles.resumoValor, { color: colors.text }]}>
+                                      Total Saídas: {(dadosCategoria.totalSaidasCategoria / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                    </Text>
+                                    <Text style={[styles.resumoValor, { color: colors.text }]}>
+                                      Saldo: {((dadosCategoria.totalEntradasCategoria - dadosCategoria.totalSaidasCategoria) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                    </Text>
+                                  </View>
+                                ))}
+                            </View>
+                          );
+                        })}
+                    </>
+                  )}
                   <View style={[styles.linhaDivisoria, { backgroundColor: colors.borderColor }]} />
                 </View>
               ))
           ) : (
-            <Text style={{ color: colors.text }}>Nenhum dado para resumir.</Text>
+            <Text style={{ color: colors.text }}>Nenhum dado para resumir por caixa no período selecionado.</Text>
           )}
         </>
       )}
 
-      <View style={[styles.separator, { backgroundColor: colors.borderColor }]} />
-      <Text style={[styles.subtitle, { color: colors.text, marginTop: 10 }]}>Gerenciamento de Dados</Text>
-      <View style={[styles.separator, { backgroundColor: colors.borderColor }]} />
-
       <View style={styles.bottomSpacer} />
       <ButtonTT
         buttonStyle={{ marginVertical: 5 }}
-        displayButton={false}
+        displayButton={false} // You might want to enable this for testing
         title="Importar Dados de Teste"
         onPress={importarDadosTeste}
         disabled={importando}
@@ -778,6 +1037,28 @@ const styles = StyleSheet.create({
   spacer: {
     width: 10,
   },
+  // New styles for date filter
+  dateFilterContainer: {
+    marginBottom: 20,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+  },
+  datePickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  dateLabel: {
+    fontSize: 16,
+    marginRight: 10,
+    minWidth: 40, // Adjust as needed
+  },
+  datePickerButton: {
+    flex: 1, // Make button take available space
+  },
+  // End new styles
   resumoGeralContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -797,12 +1078,56 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
-  resumoItem: {
-    marginBottom: 10,
+  // Estilos para o resumo por Caixa
+  resumoCaixaContainer: {
+    marginBottom: 15,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
   },
-  resumoCategoria: {
+  resumoCaixaTitulo: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  resumoValorGeral: {
+    fontSize: 15,
+    marginLeft: 10,
+    fontWeight: 'bold',
+  },
+  // Estilos para o resumo por Mês dentro da Caixa
+  resumoMesContainer: {
+    marginTop: 10,
+    marginBottom: 10,
+    paddingLeft: 10,
+    borderLeftWidth: 2, // Uma pequena borda para indicar o aninhamento
+    borderLeftColor: '#eee',
+  },
+  resumoMesTitulo: {
+    fontSize: 17,
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  resumoValorMes: {
+    fontSize: 15,
+    marginLeft: 10,
+  },
+  linhaDivisoriaInterna: {
+    height: 0.5,
+    marginVertical: 10,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  // Estilos para o resumo de Categoria dentro do Mês
+  resumoCategoriaItem: {
+    marginBottom: 5,
+    marginLeft: 20, // Indenta as categorias ainda mais
+  },
+  resumoCategoriaNome: {
     fontSize: 16,
     fontWeight: 'bold',
+    marginBottom: 2,
   },
   resumoValor: {
     fontSize: 14,
@@ -810,7 +1135,7 @@ const styles = StyleSheet.create({
   },
   linhaDivisoria: {
     height: 1,
-    marginTop: 5,
+    marginTop: 15,
     marginBottom: 5,
   },
   bottomSpacer: {

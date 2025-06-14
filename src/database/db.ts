@@ -44,6 +44,7 @@ async function inicializarBanco() {
         CREATE TABLE IF NOT EXISTS transacoes (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           descricao TEXT NOT NULL,
+          caixa TEXT NOT NULL,
           categoria TEXT NOT NULL,
           quantidade INTEGER NOT NULL,
           valor INTEGER NOT NULL,
@@ -104,6 +105,7 @@ export async function recriarTabela() {
       CREATE TABLE transacoes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         descricao TEXT NOT NULL,
+        caixa TEXT NOT NULL,
         categoria TEXT NOT NULL,
         quantidade INTEGER NOT NULL,
         valor INTEGER NOT NULL,
@@ -123,6 +125,7 @@ export async function recriarTabela() {
 // --- Funções para Transações (existentes) ---
 export async function salvarTransacao(transacao: {
   descricao: string;
+  caixa: string;
   categoria: string;
   quantidade: number;
   valor: number;
@@ -133,10 +136,11 @@ export async function salvarTransacao(transacao: {
   return new Promise((resolve, reject) => {
     const database = getDatabase();
     database.runAsync(
-      `INSERT INTO transacoes (descricao, categoria, quantidade, valor, tipo_transacao, acao, data)
-       VALUES (?, ?, ?, ?, ?, ?, ?);`,
+      `INSERT INTO transacoes (descricao, caixa, categoria, quantidade, valor, tipo_transacao, acao, data)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?);`,
       [
         transacao.descricao,
+        transacao.caixa,
         transacao.categoria,
         transacao.quantidade,
         transacao.valor,
@@ -155,6 +159,7 @@ export async function salvarTransacao(transacao: {
 export async function atualizarTransacao(transacao: {
   id: number;
   descricao: string;
+  caixa: string;
   categoria: string;
   quantidade: number;
   valor: number;
@@ -166,11 +171,12 @@ export async function atualizarTransacao(transacao: {
     const database = getDatabase();
     database.runAsync(
       `UPDATE transacoes
-       SET descricao = ?, categoria = ?, quantidade = ?, valor = ?,
+       SET descricao = ?, caixa = ?, categoria = ?, quantidade = ?, valor = ?,
            tipo_transacao = ?, acao = ?, data = ?
        WHERE id = ?;`,
       [
         transacao.descricao,
+        transacao.caixa,
         transacao.categoria,
         transacao.quantidade,
         transacao.valor,

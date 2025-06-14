@@ -161,7 +161,7 @@ const DynamicSeasonInput = forwardRef<DynamicSeasonInputRef, DynamicSeasonInputP
           {seasons.map((season, index) => (
             <View key={season.id}>
               <Text style={[styles.label, labelStyle, { color: colors.text }]}>Temporada {index + 1}:</Text>
-              <View style={[styles.seasonGroup, seasonContainerStyle, { backgroundColor: colors.inputBackground, height: 60 }]}>
+              <View style={[styles.seasonGroup, seasonContainerStyle, { backgroundColor: colors.inputBackground}]}>
                 <TextInput
                   style={[
                     styles.input,
@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   contentContainer: { // Renamed from scrollViewContent, removed scrollView
-    flexGrow: 1, // To allow content to expand within KeyboardAvoidingView
+    flexGrow: 0, // To allow content to expand within KeyboardAvoidingView
     paddingBottom: 20,
   },
   seasonGroup: {
@@ -219,6 +219,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 15,
     padding: 0,
+    height: 60,
     borderRadius: 0,
     borderWidth: 0,
     borderColor: '#ccc'
@@ -232,14 +233,12 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    height: 60,
     paddingHorizontal: 15,
     borderRadius: 0,
     borderWidth: 0,
     fontSize: 16,
   },
   removeButton: {
-    backgroundColor:'red',
     margin: 20,
     width: 30,
     height: 30,

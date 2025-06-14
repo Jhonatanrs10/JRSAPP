@@ -468,10 +468,7 @@ export default function Import() {
         )}
       </View>
 
-      <View style={[styles.separator, { backgroundColor: colors.borderColor }]} />
-      <Text style={[styles.subtitle, { color: colors.text, marginTop: 10 }]}>Gerenciamento de Dados</Text>
-      <View style={[styles.separator, { backgroundColor: colors.borderColor }]} />
-
+      <View style={styles.bottomSpacer} />
       <ButtonTT
         title="Importar Dados Teste"
         displayButton={false}
@@ -544,5 +541,8 @@ const styles = StyleSheet.create({
   },
   spacer: {
     width: 10,
+  },
+  bottomSpacer: {
+    height: 50,
   },
 });

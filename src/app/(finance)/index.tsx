@@ -15,6 +15,7 @@ type Acao = 'entrada' | 'saida';
 interface Transacao {
   id: number;
   descricao: string;
+  caixa: string;
   categoria: string;
   quantidade: number;
   valor: number;
@@ -92,6 +93,7 @@ export default function Finance() {
       params: {
         id: transacao.id,
         descricao: transacao.descricao,
+        caixa: transacao.caixa,
         categoria: transacao.categoria,
         quantidade: transacao.quantidade,
         valor: transacao.valor,
@@ -125,6 +127,9 @@ export default function Finance() {
         <View style={[styles.transacaoInfoPrincipal,{backgroundColor:colors.inputBackground}]}>
           <Text style={[styles.transacaoDescricao, { color: colors.text }]}>
             {transacao.descricao}
+          </Text>
+          <Text style={[styles.transacaoCategoria, { color: colors.text }]}>
+            {transacao.caixa}
           </Text>
           <Text style={[styles.transacaoCategoria, { color: colors.text }]}>
             {transacao.categoria}
@@ -181,6 +186,7 @@ export default function Finance() {
     const termoBusca = busca.toLowerCase();
     return (
       transacao.descricao.toLowerCase().includes(termoBusca) ||
+      transacao.caixa.toLowerCase().includes(termoBusca) ||
       transacao.categoria.toLowerCase().includes(termoBusca) ||
       formatarMoeda(transacao.valor).includes(termoBusca)
     );
