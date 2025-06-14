@@ -17,7 +17,8 @@ show_menu() {
   echo "1. Instalar Dependências (npx expo install)"
   echo "2. Rodar o Projeto (npx expo start)"
   echo "3. Buildar APK (EAS Build)"
-  echo "4. Abrir Pasta no VS Code (code .) e Fechar Terminal"
+  echo "4. Verificar Saúde do Projeto (npx expo doctor)" # Nova opção
+  echo "5. Abrir Pasta no VS Code (code .) e Fechar Terminal"
   echo "0. Sair"
   echo "-------------------------------------"
   echo -n "Escolha uma opção: "
@@ -57,11 +58,42 @@ run_project() {
   # Dependendo de como você parar o servidor, pode ser necessário rodar o script novamente.
 }
 
+check_expo_login() {
+  echo "Verificando status do login no Expo..."
+  local login_status
+  login_status=$(npx expo whoami 2>&1)
+  local exit_code=$?
+
+  if [ "$exit_code" -eq 0 ] && [[ "$login_status" != *"Not logged in"* ]]; then
+    echo "Você está logado como: $login_status"
+    return 0
+  else
+    echo "Você não está logado no Expo."
+    echo "Por favor, faça login para continuar com o build."
+    echo ""
+    npx expo login
+    local login_again_status
+    login_again_status=$(npx expo whoami 2>&1)
+    local login_again_exit_code=$?
+    if [ "$login_again_exit_code" -eq 0 ] && [[ "$login_again_status" != *"Not logged in"* ]]; then
+      echo "Login realizado com sucesso."
+      return 0
+    else
+      echo "Não foi possível fazer o login. O build não será iniciado."
+      return 1
+    fi
+  fi
+}
+
 build_apk() {
   echo ""
   echo "Iniciando o processo de build do APK com EAS Build..."
-  echo "Certifique-se de estar logado na sua conta Expo."
-  npx expo login
+
+  if ! check_expo_login; then
+    echo -n "Pressione ENTER para continuar..."
+    read -r
+    return
+  fi
 
   echo ""
   echo "Configurando EAS Update (se ainda não estiver configurado)..."
@@ -78,14 +110,24 @@ build_apk() {
   read -r
 }
 
+# --- NOVA FUNÇÃO PARA EXPO DOCTOR ---
+run_expo_doctor() {
+  echo ""
+  echo "Verificando a saúde do seu projeto Expo e ambiente de desenvolvimento..."
+  echo "Isso pode identificar e sugerir soluções para problemas comuns."
+  npx expo-doctor
+  echo ""
+  echo -n "Pressione ENTER para continuar..."
+  read -r
+}
+# --- FIM DA NOVA FUNÇÃO ---
+
 open_vscode() {
   echo ""
   echo "Abrindo o projeto no VS Code (code .)..."
-  # O comando 'code .' requer que o VS Code esteja instalado e que seu executável
-  # esteja no PATH do sistema.
-  code . & # O '&' executa o comando em segundo plano, liberando o terminal.
-  sleep 1  # Pequena pausa para garantir que o VS Code comece a abrir
-  exit 0   # Encerra o script e, por consequência, o terminal que o executou
+  code . &
+  sleep 1
+  exit 0
 }
 
 # Loop principal do menu
@@ -96,7 +138,8 @@ while true; do
     1) install_dependencies ;;
     2) run_project ;;
     3) build_apk ;;
-    4) open_vscode ;; # Opção para abrir VS Code e fechar terminal
+    4) run_expo_doctor ;; # Chama a nova função
+    5) open_vscode ;;
     0)
       echo ""
       echo "Saindo. Até mais!"
