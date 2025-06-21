@@ -134,7 +134,7 @@ export default function ProductsScreen() {
           </View>
         )}
       />
-      <Pressable onPress={importProductsFromFile} style={[styles.button, { backgroundColor: colors.info }]}>
+      <Pressable onPress={importProductsFromFile} style={[styles.button, { backgroundColor: colors.info, marginTop: 5 }]}>
         <Text style={styles.buttonText}>Importar de TXT</Text>
       </Pressable>
 
