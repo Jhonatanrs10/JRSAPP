@@ -190,15 +190,6 @@ const DynamicSeasonInput = forwardRef<DynamicSeasonInputRef, DynamicSeasonInputP
               </View>
             </View>
           ))}
-          {/* If you still want an explicit 'Add' button after changing to View, you'll need to uncomment/re-add it here */}
-          {/*
-          <TouchableOpacity
-            onPress={addSeasonInput}
-            style={[styles.addButton, addButtonStyle, { backgroundColor: colors.tint }]}
-          >
-            <Text style={[styles.addButtonText, addButtonTextStyle]}>Adicionar Temporada</Text>
-          </TouchableOpacity>
-          */}
         </View>
       </KeyboardAvoidingView>
     );

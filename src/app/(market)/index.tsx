@@ -1,222 +1,178 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { ScrollView, Pressable, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useCallback, useState } from 'react';
+import { FlatList, StyleSheet, Pressable } from 'react-native';
 import { Text, View } from '../../components/Themed';
-import CalculatorButtons from '../../components/Jhonatanrs/CalculatorButtons';
-import ProductSelector from '../../components/Jhonatanrs/ProductSelector';
-import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from 'expo-router';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+import Colors from '../../constants/Colors';
+import { useColorScheme } from '../../components/useColorScheme';
 
-export default function App() {
-  const [input1, setInput1] = useState('');
-  const [input2, setInput2] = useState('0');
-  const [selectedProduct, setSelectedProduct] = useState<string>('Produto');
-  const [products, setProducts] = useState<string[]>([]);
-  const [history, setHistory] = useState<{ unitValue: number; quantity: number; product: string }[]>([]);
-  const [accumulatedTotal, setAccumulatedTotal] = useState('R$ 0,00');
+type HistoryItem = {
+  product: string;
+  unitValue: number;
+  quantity: number;
+};
 
-  const intervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const repeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+export default function TwoScreen() {
+  const [history, setHistory] = useState<HistoryItem[]>([]);
 
-  const clearInput1 = () => setInput1('');
-  const clearInput2 = () => setInput2('0');
+  const colorScheme = useColorScheme() ?? 'light';
+  const colors = Colors[colorScheme];
 
-  useEffect(() => {
-    const loadHistory = async () => {
-      const stored = await AsyncStorage.getItem('history');
-      if (stored) {
-        setHistory(JSON.parse(stored));
-      }
-    };
-    loadHistory();
-  }, []);
+  const loadHistory = async () => {
+    const stored = await AsyncStorage.getItem('history');
+    if (stored) {
+      setHistory(JSON.parse(stored));
+    }
+  };
 
-  useEffect(() => {
-      const loadProducts = async () => {
-        const saved = await AsyncStorage.getItem('products');
-        if (saved) setProducts(JSON.parse(saved));
-      };
-      loadProducts();
-    }, []);
+  const clearHistory = async () => {
+    await AsyncStorage.removeItem('history');
+    setHistory([]);
+  };
 
-  useEffect(() => {
-    const total = history.reduce(
-      (acc, item) => acc + item.unitValue * item.quantity,
-      0
-    );
-    setAccumulatedTotal(
-      total.toLocaleString('pt-BR', {
-        style: 'currency',
-        currency: 'BRL',
-      })
-    );
-  }, [history]);
-  
+  const deleteItem = async (visualIndex: number) => {
+    const realIndex = history.length - 1 - visualIndex;
+    const newHistory = [...history];
+    newHistory.splice(realIndex, 1);
+    setHistory(newHistory);
+    await AsyncStorage.setItem('history', JSON.stringify(newHistory));
+  };
+
   useFocusEffect(
-    React.useCallback(() => {
-      const loadData = async () => {
-        const storedHistory = await AsyncStorage.getItem('history');
-        if (storedHistory) {
-          setHistory(JSON.parse(storedHistory));
-        } else {
-          setHistory([]);
-        }
-
-        const savedProducts = await AsyncStorage.getItem('products');
-        if (savedProducts) {
-          setProducts(JSON.parse(savedProducts));
-        } else {
-          setProducts([]);
-        }
-      };
-
-      loadData();
-
-      return () => {
-      };
+    useCallback(() => {
+      loadHistory();
     }, [])
   );
 
-  const formatToCurrency = (value: string): string => {
-    const numeric = value.replace(/\D/g, '');
-    const number = parseFloat(numeric || '0') / 100;
-    return number.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-  };
+  const exportHistory = async () => {
+    if (history.length === 0) return;
 
-  const addToHistory = async () => {
-    const unitValue = parseFloat(input1.replace(/\D/g, '') || '0') / 100;
-    let quantityToAdd = parseInt(input2, 10);
+    const content = history
+      .map((item) => {
+        const total = item.unitValue * item.quantity;
+        const formatted = `${item.product} ${item.quantity}x ${item.unitValue.toLocaleString('pt-BR', {
+          style: 'currency',
+          currency: 'BRL',
+        })} (${total.toLocaleString('pt-BR', {
+          style: 'currency',
+          currency: 'BRL',
+        })})`;
+        return formatted;
+      })
+      .join('\n');
 
-    if (unitValue <= 0) {
-      Alert.alert('Valor inválido', 'Por favor, insira um valor unitário maior que zero.');
-      return;
-    }
-    
-    // Altera '0' para '1' e alerta o usuário
-    if (quantityToAdd === 0) {
-        quantityToAdd = 1;
-    }
-
-
-    const newItem = { product: selectedProduct, unitValue, quantity: quantityToAdd };
-    const updatedHistory = [...history, newItem];
-    setHistory(updatedHistory);
+    const fileUri = FileSystem.documentDirectory + 'history.txt';
 
     try {
-      await AsyncStorage.setItem('history', JSON.stringify(updatedHistory));
+      await FileSystem.writeAsStringAsync(fileUri, content, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+
+      await Sharing.shareAsync(fileUri);
     } catch (error) {
-      console.error('Erro ao salvar o histórico:', error);
+      console.error('Erro ao exportar:', error);
     }
-
-    setInput1('');
-    setInput2('0');
-    setSelectedProduct('Produto');
   };
 
-  const handleNumberPressInput1 = (num: string) =>
-    setInput1((prev) => {
-      if (prev.length < 10) return prev + num;
-      return prev;
-    });
 
-  const handleBackspaceInput1 = () => setInput1((prev) => prev.slice(0, -1));
-  
-  const handleNumberPressInput2 = (num: string) => {
-    setInput2((prev) => {
-      if (prev === '0') {
-        if (num === '0') {
-          return '0';
-        }
-        return num;
-      }
-      return prev + num;
-    });
-  };
-
-  const handleBackspaceInput2 = () => {
-    setInput2((prev) => {
-      const newValue = prev.slice(0, -1);
-      return newValue === '' ? '0' : newValue;
-    });
-  };
 
   return (
-    <View style={{ flex: 1, paddingTop: 10, paddingHorizontal: 15 }}>
-    
-      <Text style={[styles.label, { marginTop: 0 }]}>Total acumulado:</Text>
-      <Text
-        style={[styles.value, { color: '#007700' }]}
-        numberOfLines={1}
-        ellipsizeMode="tail"
-        adjustsFontSizeToFit={false}
-      >
-        {accumulatedTotal}
-      </Text>
+    <View style={styles.container}>
+      <Text style={styles.title}>Histórico</Text>
 
-      <ProductSelector
-        selectedProduct={selectedProduct}
-        onSelect={setSelectedProduct}
+      <FlatList
+        data={[...history].reverse()} // <- apenas inverte visualmente
+        keyExtractor={(_, index) => index.toString()}
+        renderItem={({ item, index }) => (
+          <View style={[styles.itemContainer, { backgroundColor: colors.inputBackground}]}>
+            <Text style={styles.item}>
+              {item.product} - {item.quantity} x{' '}
+              {item.unitValue.toLocaleString('pt-BR', {
+                style: 'currency',
+                currency: 'BRL',
+              })}{' '}
+              (
+              {(item.unitValue * item.quantity).toLocaleString('pt-BR', {
+                style: 'currency',
+                currency: 'BRL',
+              })}
+              )
+            </Text>
+
+            <Pressable onPress={() => deleteItem(index)} style={styles.deleteButton}>
+              <Text style={styles.deleteButtonText}>Excluir</Text>
+            </Pressable>
+          </View>
+        )}
       />
 
-      <Text style={styles.value}>Unidade: {formatToCurrency(input1)}</Text>
-      <CalculatorButtons
-        onPressNumber={handleNumberPressInput1}
-        onBackspace={handleBackspaceInput1}
-        onStartBackspaceHold={clearInput1}
-        onStopBackspaceHold={() => {}}
-      />
-      
-      <Text style={styles.value}>Quantidade: {input2}</Text>
-      <CalculatorButtons
-        onPressNumber={handleNumberPressInput2}
-        onBackspace={handleBackspaceInput2}
-        onStartBackspaceHold={clearInput2}
-        onStopBackspaceHold={() => {}}
-      />
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+        <Pressable onLongPress={clearHistory} style={[styles.clearButton, { flex: 1, marginRight: 5 }]}>
+          <Text style={styles.clearButtonText}>Limpar Histórico</Text>
+        </Pressable>
 
-      <Pressable style={styles.addButton} onPress={addToHistory}>
-        <Text style={styles.addButtonText}>Adicionar ao total</Text>
-      </Pressable>
+        <Pressable onPress={exportHistory} style={[styles.exportButton, { flex: 1, marginLeft: 5 }]}>
+          <Text style={styles.clearButtonText}>Exportar TXT</Text>
+        </Pressable>
+      </View>
+
     </View>
   );
 }
 
+
 const styles = StyleSheet.create({
-  label: { fontSize: 18, textAlign: 'center', marginTop: 5 },
-  value: { fontSize: 32, textAlign: 'center', marginBottom: 5 },
-  addButton: {
-    backgroundColor: '#007AFF',
-    paddingVertical: 10,
-    borderRadius: 8,
-    marginTop: 0,
-    alignItems: 'center',
+  container: {
+    flex: 1,
+    padding: 15,
+    paddingTop: 10,
   },
-  addButtonText: {
-    color: 'white',
+  title: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  itemContainer: {
+    marginVertical: 6,
+    padding: 10,
+    borderRadius: 8,
+    borderColor: '#1c1c1e',
+    borderWidth: 0,
+  },
+  item: {
     fontSize: 18,
+    marginBottom: 6,
+  },
+  clearButton: {
+    backgroundColor: '#FF3B30',
+    padding: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  clearButtonText: {
+    color: 'white',
     fontWeight: 'bold',
   },
-  historyItem: {
-    fontSize: 16,
-    marginVertical: 2,
-    textAlign: 'center',
+  deleteButton: {
+    backgroundColor: '#FF9500',
+    padding: 6,
+    borderRadius: 6,
+    alignSelf: 'flex-end',
   },
-  productButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+  deleteButtonText: {
+    color: 'white',
+    fontSize: 14,
+  },
+  exportButton: {
+    backgroundColor: '#34C759',
+    padding: 10,
     borderRadius: 8,
-    borderColor: '#ccc',
-    borderWidth: 1,
-    marginRight: 10,
+    alignItems: 'center',
+    marginBottom: 20
   },
-  selectedProductButton: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
-  },
-  pickerContainer: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    marginBottom: 10,
-    overflow: 'hidden',
-  },
+
 });

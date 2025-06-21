@@ -9,6 +9,8 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
+import Colors from '../../constants/Colors';
+import { useColorScheme } from '../../components/useColorScheme';
 
 
 interface ProductSelectorProps {
@@ -21,31 +23,39 @@ export default function ProductSelector({
   onSelect,
 }: ProductSelectorProps) {
   const [modalVisible, setModalVisible] = useState(false);
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useState(''); // Estado para o campo de busca
   const [products, setProducts] = useState<string[]>([]);
 
- useFocusEffect(
-  React.useCallback(() => {
-    const loadProducts = async () => {
-      const saved = await AsyncStorage.getItem('products');
-      if (saved) setProducts(JSON.parse(saved));
-    };
-    loadProducts();
-  }, [])
-);
-
+  useFocusEffect(
+    React.useCallback(() => {
+      const loadProducts = async () => {
+        const saved = await AsyncStorage.getItem('products');
+        if (saved) setProducts(JSON.parse(saved));
+      };
+      loadProducts();
+    }, [])
+  );
 
   const filteredProducts = products.filter((p) =>
     p.toLowerCase().includes(searchText.toLowerCase())
   );
 
+  // Função para fechar o modal e limpar o campo de busca
+  const closeModalAndClearSearch = () => {
+    setModalVisible(false);
+    setSearchText(''); // Limpa o campo de busca
+  };
+
+  const colorScheme = useColorScheme() ?? 'light';
+  const colors = Colors[colorScheme];
+
   return (
-    <View>
+    <View style={{backgroundColor: colors.background}}>
       <Pressable
-        style={styles.selectorButton}
+        style={[styles.selectorButton, { backgroundColor: colors.inputBackground }]}
         onPress={() => setModalVisible(true)}
       >
-        <Text style={styles.selectorText}>
+        <Text style={[styles.selectorText, {flex: 1, backgroundColor: colors.inputBackground, color: colors.text }]}>
           {selectedProduct || 'Selecione um produto...'}
         </Text>
       </Pressable>
@@ -69,7 +79,7 @@ export default function ProductSelector({
               <TouchableOpacity
                 onPress={() => {
                   onSelect(item);
-                  setModalVisible(false);
+                  closeModalAndClearSearch(); // Chama a nova função ao selecionar
                 }}
                 style={styles.productItem}
               >
@@ -79,7 +89,7 @@ export default function ProductSelector({
           />
 
           <Pressable
-            onPress={() => setModalVisible(false)}
+            onPress={closeModalAndClearSearch} // Chama a nova função ao cancelar
             style={styles.cancelButton}
           >
             <Text style={styles.cancelText}>Cancelar</Text>
@@ -93,13 +103,14 @@ export default function ProductSelector({
 const styles = StyleSheet.create({
   label: { fontSize: 18, textAlign: 'center', marginTop: 10, color: 'white' },
   selectorButton: {
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#ccc',
     borderRadius: 8,
     padding: 10,
     marginBottom: 10,
+    height: 80
   },
-  selectorText: { fontSize: 16, textAlign: 'center' },
+  selectorText: { fontSize: 20, textAlign: 'center', textAlignVertical: 'center' },
   modalContainer: {
     flex: 1,
     padding: 20
@@ -112,14 +123,19 @@ const styles = StyleSheet.create({
   searchInput: {
     padding: 10,
     borderRadius: 8,
-    marginBottom: 15,
+    fontSize: 25,
+    height:90,
+    marginBottom: 15
   },
   productItem: {
+    justifyContent: 'center',
     paddingVertical: 10,
+    height: 80,
     borderBottomWidth: 1,
     borderBottomColor: '#444',
+   
   },
-  productText: { fontSize: 18 },
+  productText: { fontSize: 25,  textAlignVertical: 'center'},
   cancelButton: {
     backgroundColor: '#007AFF',
     padding: 10,

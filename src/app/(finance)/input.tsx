@@ -476,7 +476,6 @@ export default function Input() {
 
         <View style={styles.inputContainer}>
           <Text style={[styles.label, { color: colors.text }]}>Data</Text>
-          {/* Replaced ThemedInput with a TouchableOpacity to trigger the date picker */}
           <TouchableOpacity onPress={() => setShowDatePicker(true)} style={[styles.dateInputButton, { borderColor: colors.borderColor, backgroundColor: colors.inputBackground }]}>
             <Text style={[styles.dateInputText, { color: data ? colors.text : colors.text, backgroundColor: colors.inputBackground }]}>
               {data || "Selecionar Data"}
