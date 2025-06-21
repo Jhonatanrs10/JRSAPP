@@ -109,11 +109,11 @@ export default function TwoScreen() {
       />
 
       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-        <Pressable onLongPress={clearHistory} style={[styles.clearButton, { flex: 1, marginRight: 5 }]}>
+        <Pressable onLongPress={clearHistory} style={[styles.clearButton, { flex: 1, marginRight: 5 ,backgroundColor: colors.error}]}>
           <Text style={styles.clearButtonText}>Limpar Histórico</Text>
         </Pressable>
 
-        <Pressable onPress={exportHistory} style={[styles.exportButton, { flex: 1, marginLeft: 5 }]}>
+        <Pressable onPress={exportHistory} style={[styles.exportButton, { flex: 1, marginLeft: 5 ,backgroundColor: colors.success}]}>
           <Text style={styles.clearButtonText}>Exportar TXT</Text>
         </Pressable>
       </View>

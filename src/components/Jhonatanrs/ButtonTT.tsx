@@ -85,7 +85,7 @@ const ButtonTT: React.FC<ButtonTTProps> = ({
       <Text
         style={[
           styles.buttonTextBase,
-          { color: colors.text }, // Cor do texto do botão (pode ser definida no Colors)
+          { color: 'white' }, // Cor do texto do botão (pode ser definida no Colors)
           disabled && styles.textDisabled, // Estilo do texto quando desabilitado
           textStyle, // Sobrescreve com estilos passados via prop
         ]}

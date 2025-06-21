@@ -124,8 +124,8 @@ show_menu() {
   echo "-------------------------------------"
   echo "  Gerenciador de Projeto Expo Go"
   echo "-------------------------------------"
-  echo "1. Instalar Dependências (npx expo install)"
-  echo "2. Rodar o Projeto (npx expo start)"
+  echo "1. Rodar o Projeto (npx expo start)"
+  echo "2. Instalar Dependências (npx expo install)"
   echo "3. Buildar APK (EAS Build)"
   echo "4. Verificar Saúde do Projeto (npx expo doctor)" # Nova opção
   echo "5. Abrir Pasta no VS Code (code .) e Fechar Terminal"
@@ -140,8 +140,8 @@ while true; do
   show_menu
   read -r choice
   case "$choice" in
-    1) install_dependencies ;;
-    2) run_project ;;
+    1) run_project ;;
+    2) install_dependencies ;;
     3) build_apk ;;
     4) run_expo_doctor ;; # Chama a nova função
     5) open_vscode ;;

@@ -118,7 +118,7 @@ export default function ProductsScreen() {
       />
 
 
-      <Pressable onPress={addProduct} style={styles.button}>
+      <Pressable onPress={addProduct} style={[styles.button, {backgroundColor: '#007bff'}]}>
         <Text style={styles.buttonText}>Salvar</Text>
       </Pressable>
 
@@ -134,11 +134,11 @@ export default function ProductsScreen() {
           </View>
         )}
       />
-      <Pressable onPress={importProductsFromFile} style={[styles.button, { backgroundColor: '#28a745' }]}>
+      <Pressable onPress={importProductsFromFile} style={[styles.button, { backgroundColor: colors.info }]}>
         <Text style={styles.buttonText}>Importar de TXT</Text>
       </Pressable>
 
-      <Pressable onPress={exportProductsToFile} style={[styles.button, { backgroundColor: '#ff9900' }]}>
+      <Pressable onPress={exportProductsToFile} style={[styles.button, { backgroundColor: colors.success }]}>
         <Text style={styles.buttonText}>Exportar para TXT</Text>
       </Pressable>
     </View>

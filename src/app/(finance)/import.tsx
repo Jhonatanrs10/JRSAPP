@@ -43,8 +43,8 @@ interface MesResumoDetalhe {
 
 // Interface atualizada para o resumo por Caixa, incluindo o detalhe por Mês
 interface CaixaResumo {
-  totalEntradasCaixa: number; // Total acumulado de entradas na caixa (geral)
-  totalSaidasCaixa: number;   // Total acumulado de saídas na caixa (geral)
+  totalEntradasCaixa: number; // Total acumulado de entradas no Caixa (geral)
+  totalSaidasCaixa: number;   // Total acumulado de saídas no Caixa (geral)
   meses: Record<string, MesResumoDetalhe>; // Detalhes por mês dentro desta caixa
 }
 
@@ -178,7 +178,7 @@ export default function Import() {
         // The data aggregation should produce the full structure so `filtersApplied` can
         // later decide what to show from that structure.
 
-        // 2. Inicializa o mês dentro da caixa se ele não existir
+        // 2. Inicializa o mês dentro do Caixa se ele não existir
         if (!resumoCaixas[t.caixa].meses[mesAnoChave]) {
           resumoCaixas[t.caixa].meses[mesAnoChave] = {
             totalEntradasMes: 0,
@@ -187,14 +187,14 @@ export default function Import() {
           };
         }
 
-        // Acumula os totais para o mês específico dentro da caixa
+        // Acumula os totais para o mês específico dentro do Caixa
         if (t.acao === 'saida') {
           resumoCaixas[t.caixa].meses[mesAnoChave].totalSaidasMes += valorTotalTransacao;
         } else if (t.acao === 'entrada') {
           resumoCaixas[t.caixa].meses[mesAnoChave].totalEntradasMes += valorTotalTransacao;
         }
 
-        // 3. Inicializa a categoria dentro do mês e da caixa se ela não existir
+        // 3. Inicializa a categoria dentro do mês e do Caixa se ela não existir
         if (!resumoCaixas[t.caixa].meses[mesAnoChave].categorias[t.categoria]) {
           resumoCaixas[t.caixa].meses[mesAnoChave].categorias[t.categoria] = {
             totalEntradasCategoria: 0,
@@ -202,7 +202,7 @@ export default function Import() {
           };
         }
 
-        // Acumula os totais para a categoria específica dentro do mês e da caixa
+        // Acumula os totais para a categoria específica dentro do mês e do Caixa
         if (t.acao === 'saida') {
           resumoCaixas[t.caixa].meses[mesAnoChave].categorias[t.categoria].totalSaidasCategoria += valorTotalTransacao;
         } else if (t.acao === 'entrada') {
@@ -926,13 +926,13 @@ export default function Import() {
                     Caixa: {caixa}
                   </Text>
                   <Text style={[styles.resumoValorGeral, { color: colors.text }]}>
-                    Total Geral Entradas na Caixa: {(dadosCaixa.totalEntradasCaixa / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    Total Geral Entradas no Caixa: {(dadosCaixa.totalEntradasCaixa / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                   </Text>
                   <Text style={[styles.resumoValorGeral, { color: colors.text }]}>
-                    Total Geral Saídas na Caixa: {(dadosCaixa.totalSaidasCaixa / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    Total Geral Saídas no Caixa: {(dadosCaixa.totalSaidasCaixa / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                   </Text>
                   <Text style={[styles.resumoValorGeral, { color: colors.text }]}>
-                    Saldo Geral da Caixa: {((dadosCaixa.totalEntradasCaixa - dadosCaixa.totalSaidasCaixa) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    Saldo Geral do Caixa: {((dadosCaixa.totalEntradasCaixa - dadosCaixa.totalSaidasCaixa) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                   </Text>
 
 
@@ -1106,7 +1106,7 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     fontWeight: 'bold',
   },
-  // Estilos para o resumo por Mês dentro da Caixa
+  // Estilos para o resumo por Mês dentro do Caixa
   resumoMesContainer: {
     marginTop: 10,
     marginBottom: 10,
