@@ -11,6 +11,7 @@ import { formatarData } from '../../utils/formatacao';
 import Colors from '../../constants/Colors';
 import { useColorScheme } from '../../components/useColorScheme';
 import DateTimePicker from '@react-native-community/datetimepicker'; // Import for date picker
+import { useFocusEffect } from '@react-navigation/native';
 
 type TipoTransacao = 'PIX' | 'Dinheiro' | 'Boleto' | 'Débito' | 'Crédito' | 'TED' | 'DOC' | 'Distinto';
 type Acao = 'entrada' | 'saida';
@@ -66,6 +67,19 @@ export default function Import() {
   // State to control if filters are applied, showing more details in the summary section
   const [filtersApplied, setFiltersApplied] = useState(false);
 
+  // Sleep
+  const sleep = (ms: number): Promise<void> => {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  };
+
+  async function limparFiltro() {
+    setFiltersApplied(true);
+    setStartDate(undefined);
+    setEndDate(undefined);
+    //calcularResumoDados();
+  }
+
+
   // --- Função para calcular o valor atual total (sempre com todas as transações) ---
   const calcularValorAtualTotal = useCallback(async () => {
     try {
@@ -89,10 +103,11 @@ export default function Import() {
   }, []);
 
   // Effect to calculate total value on initial load and whenever data changes (implicit via calcularResumoDados if it's called)
-  useEffect(() => {
-    calcularValorAtualTotal();
-  }, [calcularValorAtualTotal]); // Recalculate if the function reference changes (unlikely for useCallback)
-
+  useFocusEffect(
+    useCallback(() => {
+      calcularValorAtualTotal();
+    }, [])
+  );
 
   // --- Função para calcular o resumo por Caixa, Mês e Categoria (com filtro) ---
   const calcularResumoDados = useCallback(async () => {
@@ -204,10 +219,11 @@ export default function Import() {
   }, [startDate, endDate]); // Recalculate when dates change
 
   // This effect ensures that the summary data (which can be filtered) is calculated
-  // when the component mounts or when the date filters change.
-  useEffect(() => {
-    calcularResumoDados();
-  }, [calcularResumoDados]);
+  useFocusEffect(
+    useCallback(() => {
+      calcularResumoDados();
+    }, [])
+  );
 
   // --- Exportar Transações (CSV) ---
   async function exportarTransacoes() {
@@ -870,13 +886,7 @@ export default function Import() {
         <ButtonTT
           buttonStyle={{ marginVertical: 5 }}
           title="Limpar Filtro"
-          onPress={() => {
-            setStartDate(undefined);
-            setEndDate(undefined);
-            // After clearing filters, recalculate and set filtersApplied to false
-            setFiltersApplied(false);
-            calcularResumoDados(); // Recalculate summary to show overall box totals again
-          }}
+          onPress={limparFiltro}
           color={colors.warning}
         />
 

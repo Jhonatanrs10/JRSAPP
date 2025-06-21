@@ -9,19 +9,8 @@ clear_screen() {
   printf "\033[2J\033[H" # Limpa a tela e move o cursor para o topo
 }
 
-show_menu() {
-  clear_screen
-  echo "-------------------------------------"
-  echo "  Gerenciador de Projeto Expo Go"
-  echo "-------------------------------------"
-  echo "1. Instalar Dependências (npx expo install)"
-  echo "2. Rodar o Projeto (npx expo start)"
-  echo "3. Buildar APK (EAS Build)"
-  echo "4. Verificar Saúde do Projeto (npx expo doctor)" # Nova opção
-  echo "5. Abrir Pasta no VS Code (code .) e Fechar Terminal"
-  echo "0. Sair"
-  echo "-------------------------------------"
-  echo -n "Escolha uma opção: "
+npxcheckversions(){
+  npx expo install --check
 }
 
 install_dependencies() {
@@ -130,6 +119,22 @@ open_vscode() {
   exit 0
 }
 
+show_menu() {
+  clear_screen
+  echo "-------------------------------------"
+  echo "  Gerenciador de Projeto Expo Go"
+  echo "-------------------------------------"
+  echo "1. Instalar Dependências (npx expo install)"
+  echo "2. Rodar o Projeto (npx expo start)"
+  echo "3. Buildar APK (EAS Build)"
+  echo "4. Verificar Saúde do Projeto (npx expo doctor)" # Nova opção
+  echo "5. Abrir Pasta no VS Code (code .) e Fechar Terminal"
+  echo "6. Check versão das dependencias (npx expo install --check)"
+  echo "0. Sair"
+  echo "-------------------------------------"
+  echo -n "Escolha uma opção: "
+}
+
 # Loop principal do menu
 while true; do
   show_menu
@@ -140,6 +145,7 @@ while true; do
     3) build_apk ;;
     4) run_expo_doctor ;; # Chama a nova função
     5) open_vscode ;;
+    6) npxcheckversions ;;
     0)
       echo ""
       echo "Saindo. Até mais!"
