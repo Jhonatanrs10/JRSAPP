@@ -478,7 +478,7 @@ const styles = StyleSheet.create({
   },
   detalheValor: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: 'bold',
   },
   linkButtonContainer: {
     flexDirection: 'row',

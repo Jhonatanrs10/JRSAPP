@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
     minWidth: 80,
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: 'bold',
     marginBottom: 10
   },
   valueButton: {

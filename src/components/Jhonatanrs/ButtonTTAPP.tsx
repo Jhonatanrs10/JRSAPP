@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
   },
   buttonTextBase: {
     fontSize: 20,
-    fontWeight: '500',
+    fontWeight: 'bold',
     margin: 10,
     marginEnd: 25
   },

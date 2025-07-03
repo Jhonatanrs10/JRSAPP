@@ -529,7 +529,7 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: 'bold',
   },
   statValue: {
     fontSize: 16,

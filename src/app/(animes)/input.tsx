@@ -164,7 +164,7 @@ export default function AnimesInput() {
     }
   };
 
-    const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
 
   useEffect(() => {
     const keyboardDidShowListener = Keyboard.addListener(
@@ -270,7 +270,7 @@ export default function AnimesInput() {
             <TouchableOpacity
               onPress={handlePasteLink}
               onLongPress={() => setLink('')}
-              style={[styles.buttonInInput, {width: 40, height: 60, backgroundColor: colors.info}]}
+              style={[styles.buttonInInput, { width: 40, height: 60, backgroundColor: colors.info }]}
             >
               <MaterialIcons name="content-paste" size={20} color="white" />
             </TouchableOpacity>
@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   subtitle: {
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: 'bold',
     marginVertical: 10,
   },
@@ -357,8 +357,8 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 16,
-    marginBottom: 8,
-    fontWeight: '500',
+    fontWeight: 'bold',
+    marginBottom: 5,
   },
   multilineInput: {
     minHeight: 60,
@@ -430,7 +430,7 @@ const styles = StyleSheet.create({
   animeDetails: { padding: 15, borderTopWidth: 1, },
   detailItem: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, },
   detailLabel: { fontSize: 14, opacity: 0.8, },
-  detailValue: { fontSize: 14, fontWeight: '500', },
+  detailValue: { fontSize: 14, fontWeight: 'bold', },
   linkButtonContainer: { flexDirection: 'row', alignItems: 'center', flexShrink: 1, },
   linkText: { textDecorationLine: 'underline', marginRight: 8, },
   linkOpenButton: { padding: 6, borderRadius: 5, justifyContent: 'center', alignItems: 'center', },

@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
   },
   buttonTextBase: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: 'bold',
   },
   buttonDisabled: {
     opacity: 0.5, // Botão mais claro quando desabilitado

@@ -248,7 +248,7 @@ export default function Input() {
         showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.formContent}
         keyboardShouldPersistTaps="handled"
-        // Removendo nestedScrollEnabled aqui, pois o modal terá sua própria FlatList
+      // Removendo nestedScrollEnabled aqui, pois o modal terá sua própria FlatList
       >
         <View style={styles.inputContainer}>
           <Text style={[styles.label, { color: colors.text }]}>Descrição da Transação</Text>
@@ -286,7 +286,7 @@ export default function Input() {
             />
             <TouchableOpacity
               onPress={() => setShowCaixaModal(true)} // Abre o modal
-              style={[styles.buttonOnRight, {width: 40, backgroundColor: colors.primary }]}
+              style={[styles.buttonOnRight, { width: 40, backgroundColor: colors.primary }]}
             >
               <AntDesign name="select1" size={20} color="white" />
             </TouchableOpacity>
@@ -316,7 +316,7 @@ export default function Input() {
             />
             <TouchableOpacity
               onPress={() => setShowCategoriaModal(true)} // Abre o modal
-              style={[styles.buttonOnRight, {width: 40, backgroundColor: colors.primary }]}
+              style={[styles.buttonOnRight, { width: 40, backgroundColor: colors.primary }]}
             >
               <AntDesign name="select1" size={20} color="white" />
             </TouchableOpacity>
@@ -472,7 +472,10 @@ export default function Input() {
               )}
               style={styles.modalList}
             />
-            <ButtonTT title="Aplicar" onPress={() => setShowCaixaModal(false)} color={colors.success} />
+            <View style={{ flexDirection: 'row' }}>
+              <ButtonTT title="Limpar" onPress={() => setCaixa('')} color={colors.info} />
+              <ButtonTT title="Criar" onPress={() => setShowCaixaModal(false)} color={colors.success} />
+            </View>
           </View>
         </View>
       </Modal>
@@ -519,11 +522,14 @@ export default function Input() {
               )}
               style={styles.modalList}
             />
-            <ButtonTT title="Aplicar" onPress={() => setShowCategoriaModal(false)} color={colors.success} />
+            <View style={{ flexDirection: 'row' }}>
+              <ButtonTT title="Limpar" onPress={() => setCategoria('')} color={colors.info} />
+              <ButtonTT title="Criar" onPress={() => setShowCategoriaModal(false)} color={colors.success} />
+            </View>
           </View>
         </View>
       </Modal>
-    </KeyboardAvoidingView>
+    </KeyboardAvoidingView >
   );
 }
 
@@ -572,7 +578,7 @@ const styles = StyleSheet.create({
     borderWidth: 0,
     borderRadius: 0,
     overflow: 'hidden',
-    height:60,
+    height: 60,
     minHeight: 60,
   },
   inputInsideButtonContainer: {
