@@ -8,6 +8,7 @@ import {
   Linking,
   Platform,
   KeyboardAvoidingView,
+  Keyboard,
 } from 'react-native';
 import { Text, View } from '../../components/Themed';
 import { ThemedInput } from '../../components/ThemedInput';
@@ -162,11 +163,34 @@ export default function AnimesInput() {
     }
   };
 
+    const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      'keyboardDidShow',
+      () => {
+        setKeyboardVisible(true); // Teclado está visível
+      }
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      'keyboardDidHide',
+      () => {
+        setKeyboardVisible(false); // Teclado está oculto
+      }
+    );
+
+    // Limpeza dos listeners ao desmontar o componente
+    return () => {
+      keyboardDidHideListener.remove();
+      keyboardDidShowListener.remove();
+    };
+  }, []);
+
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      //keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 1} // Este pode ser ajustado para um valor, ex: Header height
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 10} // Este pode ser ajustado para um valor, ex: Header height
     >
       <Text style={[styles.title, { color: colors.text }]}>
         {animeSendoEditado ? `Editar Anime (${animeSendoEditado.id})` : 'Novo Anime'}
@@ -179,6 +203,7 @@ export default function AnimesInput() {
         showsVerticalScrollIndicator={false}
         showsHorizontalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        scrollEnabled={!isKeyboardVisible}
       >
         <View style={styles.inputContainer}>
           <Text style={[styles.label, { color: colors.text }]}>Nome do Anime</Text>

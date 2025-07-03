@@ -87,7 +87,7 @@ export default function Import() {
 
       animes.sort((a, b) => a.id - b.id);
 
-      const cabecalho = 'Nome;Status;DiaLançamento;Observação;Link;Temporadas\n';
+      const cabecalho = 'Nome;Status;Lançamento;Observação;Link;Temporadas\n';
 
       const linhas = animes.map(a => {
         const escapeAndQuote = (value: string | number | null): string => {
@@ -163,11 +163,11 @@ export default function Import() {
       const cabecalhoLinha = linhas[0].trim();
       const cabecalho = cabecalhoLinha.split(';').map(h => h.trim());
 
-      const camposEsperados = ['Nome', 'Status', 'DiaLançamento', 'Observação', 'Link', 'Temporadas'];
+      const camposEsperados = ['Nome', 'Status', 'Lançamento', 'Observação', 'Link', 'Temporadas'];
       const camposValidos = camposEsperados.every(campo => cabecalho.includes(campo));
 
       if (!camposValidos) {
-        Alert.alert('Erro', 'Formato de arquivo inválido. Verifique se o arquivo tem o cabeçalho correto com os campos essenciais: Nome, Status, DiaLançamento, Observação, Link, Temporadas (separado por ponto e vírgula).');
+        Alert.alert('Erro', 'Formato de arquivo inválido. Verifique se o arquivo tem o cabeçalho correto com os campos essenciais: Nome, Status, Lançamento, Observação, Link, Temporadas (separado por ponto e vírgula).');
         return;
       }
 
@@ -229,7 +229,7 @@ export default function Import() {
           }
           const status: StatusAnime = rawStatus as StatusAnime;
 
-          const rawReleaseDay = valores[cabecalho.indexOf('DiaLançamento')];
+          const rawReleaseDay = valores[cabecalho.indexOf('Lançamento')];
           const releaseDayValues: ReleaseDay[] = ['segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado', 'domingo'];
           if (!releaseDayValues.includes(rawReleaseDay as ReleaseDay)) {
             throw new Error(`Dia de lançamento inválido: "${rawReleaseDay}"`);
