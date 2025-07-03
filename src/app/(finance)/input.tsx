@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import ButtonTT from '../../components/Jhonatanrs/ButtonTT';
+import AntDesign from '@expo/vector-icons/AntDesign';
 import {
   Button,
   Alert,
@@ -10,6 +11,7 @@ import {
   TouchableOpacity,
   Platform,
   KeyboardAvoidingView,
+  Modal, // Importar Modal
 } from 'react-native';
 import { Text, View } from '../../components/Themed';
 import { ThemedInput } from '../../components/ThemedInput';
@@ -20,7 +22,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import Colors from '../../constants/Colors';
 import { useColorScheme } from '../../components/useColorScheme';
 import { useFocusEffect } from '@react-navigation/native';
-import DateTimePicker from '@react-native-community/datetimepicker'; // Import DateTimePicker
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 type TipoTransacao = 'PIX' | 'Dinheiro' | 'Boleto' | 'Débito' | 'Crédito' | 'TED' | 'DOC' | 'Distinto';
 type Acao = 'entrada' | 'saida';
@@ -55,10 +57,14 @@ export default function Input() {
   const [caixasFiltradas, setCaixasFiltradas] = useState<string[]>([]);
   const [categorias, setCategorias] = useState<string[]>([]);
   const [categoriasFiltradas, setCategoriasFiltradas] = useState<string[]>([]);
-  const [mostrarCategoria, setmostrarCategoria] = useState(false);
-  const [mostrarCaixa, setmostrarCaixa] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false); // New state for date picker visibility
-  const [selectedDateObject, setSelectedDateObject] = useState<Date>(new Date()); // New state to hold Date object for picker
+  const [mostrarCategoriaSugestao, setMostrarCategoriaSugestao] = useState(false); // Renomeado para clareza
+  const [mostrarCaixaSugestao, setMostrarCaixaSugestao] = useState(false); // Renomeado para clareza
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedDateObject, setSelectedDateObject] = useState<Date>(new Date());
+
+  // NOVOS ESTADOS PARA MODAIS
+  const [showCaixaModal, setShowCaixaModal] = useState(false);
+  const [showCategoriaModal, setShowCategoriaModal] = useState(false);
 
   // Função para obter a data atual formatada
   const getTodayDate = useCallback(() => {
@@ -79,16 +85,14 @@ export default function Input() {
     setTipoTransacao('PIX');
     setAcao('saida');
     const today = new Date();
-    setData(getTodayDate()); // Define a data para hoje ao limpar
-    setSelectedDateObject(today); // Also update the Date object
-    // Limpa os parâmetros da rota
+    setData(getTodayDate());
+    setSelectedDateObject(today);
     router.setParams({});
   }, [router, getTodayDate]);
 
   // Efeito para limpar campos quando a tab recebe foco
   useFocusEffect(
     useCallback(() => {
-      // Se não houver params.id, limpa os campos e os parâmetros
       if (!params.id) {
         limparCampos();
       }
@@ -100,13 +104,11 @@ export default function Input() {
     if (params.id) {
       console.log('Carregando valores iniciais:', params);
 
-      // Carregar valores iniciais
       setDescricao(params.descricao as string);
       setCaixa(params.caixa as string);
       setCategoria(params.categoria as string);
       setQuantidade(params.quantidade?.toString() ?? '');
 
-      // Formatar o valor inicial
       const valorNumerico = Number(params.valor);
       console.log('Valor numérico:', valorNumerico);
       setValor(formatarMoeda(valorNumerico));
@@ -115,11 +117,9 @@ export default function Input() {
       setAcao(params.acao as Acao);
       setData(params.data as string);
 
-      // Set selectedDateObject from params.data
       const [day, month, year] = (params.data as string).split('/').map(Number);
       setSelectedDateObject(new Date(year, month - 1, day));
     } else {
-      // Se não houver params.id (nova transação), garanta que a data seja a de hoje
       const today = new Date();
       setData(getTodayDate());
       setSelectedDateObject(today);
@@ -156,7 +156,7 @@ export default function Input() {
       cat.toLowerCase().includes(texto.toLowerCase())
     );
     setCategoriasFiltradas(filtradas);
-    setmostrarCategoria(true);
+    setMostrarCategoriaSugestao(true);
   }
 
   function filtrarCaixas(texto: string) {
@@ -164,34 +164,31 @@ export default function Input() {
       cat.toLowerCase().includes(texto.toLowerCase())
     );
     setCaixasFiltradas(filtradas);
-    setmostrarCaixa(true);
+    setMostrarCaixaSugestao(true);
   }
 
 
-  // Função para formatar o valor ao digitar
   const handleValorChange = (text: string) => {
     const valorFormatado = formatarInput(text);
     console.log('Valor formatado:', valorFormatado);
     setValor(valorFormatado);
   };
 
-  // Função para formatar a quantidade ao digitar
   const handleQuantidadeChange = (text: string) => {
     const numeros = text.replace(/\D/g, '');
     setQuantidade(numeros);
   };
 
-  // Handler for DateTimePicker change event
   const onDateChange = (event: any, selectedDate?: Date) => {
     const currentDate = selectedDate || selectedDateObject;
-    setShowDatePicker(Platform.OS === 'ios'); // On iOS, keep picker open until explicitly closed
+    setShowDatePicker(Platform.OS === 'ios');
     setSelectedDateObject(currentDate);
-    setData(formatarData(currentDate)); // Update the formatted date string
+    setData(formatarData(currentDate));
   };
 
   async function salvar() {
     try {
-      if (!descricao || !categoria || !quantidade || !valor || !data) {
+      if (!descricao || !caixa || !categoria || !quantidade || !valor || !data) {
         Alert.alert('Erro', 'Preencha todos os campos');
         return;
       }
@@ -228,7 +225,6 @@ export default function Input() {
 
       Alert.alert('Sucesso', 'Transação salva com sucesso!');
       limparCampos();
-      // Navigate to home and then back to clear navigation stack if needed
       router.replace('/input');
     } catch (error) {
       console.error('Erro ao salvar:', error);
@@ -240,7 +236,7 @@ export default function Input() {
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 10}
     >
       <Text style={[styles.title, { color: colors.text }]}>
         {params.id ? `Editar Transação (${params.id})` : 'Nova Transação'}
@@ -252,7 +248,7 @@ export default function Input() {
         showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.formContent}
         keyboardShouldPersistTaps="handled"
-        nestedScrollEnabled={true}
+        // Removendo nestedScrollEnabled aqui, pois o modal terá sua própria FlatList
       >
         <View style={styles.inputContainer}>
           <Text style={[styles.label, { color: colors.text }]}>Descrição da Transação</Text>
@@ -264,163 +260,66 @@ export default function Input() {
           />
         </View>
 
+        {/* Campo Caixa com Botão de Modal */}
         <View style={styles.inputContainer}>
           <Text style={[styles.label, { color: colors.text }]}>Caixa</Text>
-          <View style={{ position: 'relative' }}>
-            <View style={[
-              styles.caixaInputContainer,
-              {
-                backgroundColor: colors.background,
-                borderColor: colors.borderColor,
-              }
-            ]}>
-              <ThemedInput
-                value={caixa}
-                onChangeText={(text) => {
-                  setCaixa(text);
-                  filtrarCaixas(text);
-                }}
-                onFocus={() => {
-                  setCaixasFiltradas(caixas);
-                  setmostrarCaixa(true);
-                }}
-                onBlur={() => {
-                  setTimeout(() => setmostrarCaixa(false), 200);
-                }}
-                placeholder="Digite ou selecione uma caixa"
-                placeholderTextColor={colors.text}
-                style={styles.caixaInput}
-              />
-              {caixa ? (
-                <TouchableOpacity
-                  onPress={() => {
-                    setCaixa('');
-                    setCaixasFiltradas(caixas);
-                  }}
-                  style={[styles.buttonInInput, { height: 60, backgroundColor: colors.inputBackground }]}
-                >
-                  <Text style={{ color: colors.text }}>✕</Text>
-                </TouchableOpacity>
-              ) : (
-                <View style={[styles.sugestaoIcon, { height: 60, backgroundColor: colors.inputBackground }]}></View>
-              )}
-            </View>
-            {mostrarCaixa && caixasFiltradas.length > 0 && (
-              <View style={[
-                styles.sugestoesContainer,
-                {
-                  backgroundColor: colors.inputBackground,
-                  borderColor: colors.borderColor,
-                  shadowColor: colors.text
-                }
-              ]}>
-                <FlatList
-                  data={caixasFiltradas}
-                  keyExtractor={(item) => item}
-                  renderItem={({ item }) => (
-                    <TouchableOpacity
-                      style={[
-                        styles.sugestaoItem,
-                        {
-                          borderBottomColor: colors.borderColor,
-                          backgroundColor: item === caixa ? `${colors.info}20` : 'transparent'
-                        }
-                      ]}
-                      onPress={() => {
-                        setCaixa(item);
-                        setmostrarCaixa(false);
-                      }}
-                    >
-                      <Text style={{ color: colors.text }}>{item}</Text>
-                    </TouchableOpacity>
-                  )}
-                  style={styles.sugestoesList}
-                  keyboardShouldPersistTaps="handled"
-                  nestedScrollEnabled={true}
-                  scrollEnabled={false}
-                />
-              </View>
-            )}
+          <View style={[
+            styles.inputWithButtonContainer,
+            {
+              borderColor: colors.borderColor,
+              backgroundColor: colors.inputBackground,
+            }
+          ]}>
+            <ThemedInput
+              value={caixa}
+              editable={false}
+              onChangeText={(text) => {
+                setCaixa(text);
+                // Você pode manter a filtragem de sugestões se quiser,
+                // mas as sugestões que aparecem abaixo do input serão menos úteis
+                // com o modal. Decidi remover o `onFocus` e `onBlur` aqui.
+                filtrarCaixas(text);
+              }}
+              placeholder="Crie ou selecione um Caixa"
+              placeholderTextColor={colors.text}
+              style={styles.inputInsideButtonContainer}
+            />
+            <TouchableOpacity
+              onPress={() => setShowCaixaModal(true)} // Abre o modal
+              style={[styles.buttonOnRight, {width: 40, backgroundColor: colors.primary }]}
+            >
+              <AntDesign name="select1" size={20} color="white" />
+            </TouchableOpacity>
           </View>
         </View>
 
+        {/* Campo Categoria com Botão de Modal */}
         <View style={styles.inputContainer}>
           <Text style={[styles.label, { color: colors.text }]}>Categoria</Text>
-          <View style={{ position: 'relative' }}>
-            <View style={[
-              styles.categoriaInputContainer,
-              {
-                backgroundColor: colors.background,
-                borderColor: colors.borderColor,
-              }
-            ]}>
-              <ThemedInput
-                value={categoria}
-                onChangeText={(text) => {
-                  setCategoria(text);
-                  filtrarCategorias(text);
-                }}
-                onFocus={() => {
-                  setCategoriasFiltradas(categorias);
-                  setmostrarCategoria(true);
-                }}
-                onBlur={() => {
-                  setTimeout(() => setmostrarCategoria(false), 200);
-                }}
-                placeholder="Digite ou selecione uma categoria"
-                placeholderTextColor={colors.text}
-                style={styles.categoriaInput}
-              />
-              {categoria ? (
-                <TouchableOpacity
-                  onPress={() => {
-                    setCategoria('');
-                    setCategoriasFiltradas(categorias);
-                  }}
-                  style={[styles.buttonInInput, { height: 60, backgroundColor: colors.inputBackground }]}
-                >
-                  <Text style={{ color: colors.text }}>✕</Text>
-                </TouchableOpacity>
-              ) : (
-                <View style={[styles.sugestaoIcon, { height: 60, backgroundColor: colors.inputBackground }]}></View>
-              )}
-            </View>
-            {mostrarCategoria && categoriasFiltradas.length > 0 && (
-              <View style={[
-                styles.sugestoesContainer,
-                {
-                  backgroundColor: colors.inputBackground,
-                  borderColor: colors.borderColor,
-                  shadowColor: colors.text
-                }
-              ]}>
-                <FlatList
-                  data={categoriasFiltradas}
-                  keyExtractor={(item) => item}
-                  renderItem={({ item }) => (
-                    <TouchableOpacity
-                      style={[
-                        styles.sugestaoItem,
-                        {
-                          borderBottomColor: colors.borderColor,
-                          backgroundColor: item === categoria ? `${colors.info}20` : 'transparent'
-                        }
-                      ]}
-                      onPress={() => {
-                        setCategoria(item);
-                        setmostrarCategoria(false);
-                      }}
-                    >
-                      <Text style={{ color: colors.text }}>{item}</Text>
-                    </TouchableOpacity>
-                  )}
-                  style={styles.sugestoesList}
-                  keyboardShouldPersistTaps="handled"
-                  nestedScrollEnabled={true}
-                  scrollEnabled={false}
-                />
-              </View>
-            )}
+          <View style={[
+            styles.inputWithButtonContainer,
+            {
+              borderColor: colors.borderColor,
+              backgroundColor: colors.inputBackground,
+            }
+          ]}>
+            <ThemedInput
+              value={categoria}
+              editable={false}
+              onChangeText={(text) => {
+                setCategoria(text);
+                filtrarCategorias(text);
+              }}
+              placeholder="Crie ou selecione uma Categoria"
+              placeholderTextColor={colors.text}
+              style={styles.inputInsideButtonContainer}
+            />
+            <TouchableOpacity
+              onPress={() => setShowCategoriaModal(true)} // Abre o modal
+              style={[styles.buttonOnRight, {width: 40, backgroundColor: colors.primary }]}
+            >
+              <AntDesign name="select1" size={20} color="white" />
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -514,7 +413,7 @@ export default function Input() {
             title="Cancelar Edição"
             onPress={() => {
               limparCampos();
-              router.replace('/input'); // Use replace to avoid stacking navigation
+              router.replace('/input');
             }}
             color={colors.error}
           />
@@ -530,6 +429,100 @@ export default function Input() {
           color={colors.success}
         />
       </View>
+
+      {/* Modal para Caixa */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={showCaixaModal}
+        onRequestClose={() => setShowCaixaModal(false)}
+      >
+        <View style={styles.centeredView}>
+          <View style={[styles.modalView, { backgroundColor: colors.background, borderColor: colors.borderColor }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Crie ou selecione um Caixa</Text>
+            <ThemedInput
+              placeholder="Buscar/Criar caixa..."
+              value={caixa} // Usa o mesmo estado para a busca
+              onChangeText={(text) => {
+                setCaixa(text);
+                filtrarCaixas(text);
+              }}
+              style={styles.modalSearchInput}
+              placeholderTextColor={colors.text}
+            />
+            <FlatList
+              data={caixasFiltradas.length > 0 ? caixasFiltradas : caixas} // Mostra filtradas se houver, senão todas
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.modalItem,
+                    {
+                      borderBottomColor: colors.borderColor,
+                      backgroundColor: item === caixa ? `${colors.info}20` : 'transparent'
+                    }
+                  ]}
+                  onPress={() => {
+                    setCaixa(item);
+                    setShowCaixaModal(false);
+                  }}
+                >
+                  <Text style={{ color: colors.text }}>{item}</Text>
+                </TouchableOpacity>
+              )}
+              style={styles.modalList}
+            />
+            <ButtonTT title="Aplicar" onPress={() => setShowCaixaModal(false)} color={colors.success} />
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal para Categoria */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={showCategoriaModal}
+        onRequestClose={() => setShowCategoriaModal(false)}
+      >
+        <View style={styles.centeredView}>
+          <View style={[styles.modalView, { backgroundColor: colors.background, borderColor: colors.borderColor }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Crie ou selecione uma Categoria</Text>
+            <ThemedInput
+              placeholder="Buscar/Criar categoria..."
+              value={categoria} // Usa o mesmo estado para a busca
+              onChangeText={(text) => {
+                setCategoria(text);
+                filtrarCategorias(text);
+              }}
+              style={styles.modalSearchInput}
+              placeholderTextColor={colors.text}
+            />
+            <FlatList
+              data={categoriasFiltradas.length > 0 ? categoriasFiltradas : categorias} // Mostra filtradas se houver, senão todas
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.modalItem,
+                    {
+                      borderBottomColor: colors.borderColor,
+                      backgroundColor: item === categoria ? `${colors.info}20` : 'transparent'
+                    }
+                  ]}
+                  onPress={() => {
+                    setCategoria(item);
+                    setShowCategoriaModal(false);
+                  }}
+                >
+                  <Text style={{ color: colors.text }}>{item}</Text>
+                </TouchableOpacity>
+              )}
+              style={styles.modalList}
+            />
+            <ButtonTT title="Aplicar" onPress={() => setShowCategoriaModal(false)} color={colors.success} />
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -572,69 +565,84 @@ const styles = StyleSheet.create({
   spacer: {
     width: 10,
   },
-  categoriaInputContainer: {
+  // Novos estilos para o input com botão lateral
+  inputWithButtonContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 0,
     borderRadius: 0,
-    overflow: 'hidden'
+    overflow: 'hidden',
+    height:60,
+    minHeight: 60,
   },
-  categoriaInput: {
+  inputInsideButtonContainer: {
     flex: 1,
-    borderWidth: 0,
+    borderWidth: 0, // Remove a borda do ThemedInput interno
+    minHeight: 60,
   },
-  caixaInputContainer: {
-    flexDirection: 'row',
+  buttonOnRight: {
+    paddingHorizontal: 10,
+    height: '100%',
+    justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 0,
-    borderRadius: 0,
-    overflow: 'hidden'
-  },
-  caixaInput: {
-    flex: 1,
-    borderWidth: 0,
-  },
-  buttonInInput: {
-    padding: 10,
-    fontSize: 12,
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  sugestaoIcon: {
-    padding: 16,
-    fontSize: 10,
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  sugestoesContainer: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
-    borderWidth: 1,
-    borderRadius: 0,
-    zIndex: 1000,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  sugestoesList: {
-    maxHeight: 200,
-  },
-  sugestaoItem: {
-    padding: 12,
-    height: 60,
-    borderBottomWidth: 1,
+    borderLeftWidth: 0,
+    borderColor: '#ccc', // Uma borda sutil entre input e botão
   },
   dateInputButton: {
-    borderWidth: 0,
-    borderRadius: 0,
+    borderWidth: 1,
+    borderRadius: 8,
     padding: 15,
-    minHeight: 60, // Ensure it matches ThemedInput height
+    minHeight: 60,
     justifyContent: 'center',
   },
   dateInputText: {
     fontSize: 16,
-  }
+  },
+  // Estilos para o Modal
+  centeredView: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)', // Fundo escurecido
+  },
+  modalView: {
+    margin: 20,
+    borderRadius: 20,
+    padding: 35,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+    width: '90%', // Largura do modal
+    maxHeight: '80%', // Altura máxima para caber na tela
+    borderWidth: 1,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 15,
+  },
+  modalSearchInput: {
+    width: '100%',
+    marginBottom: 15,
+    minHeight: 50,
+  },
+  modalList: {
+    width: '100%',
+    maxHeight: 300, // Altura máxima da lista no modal
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+  },
+  modalItem: {
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
 });

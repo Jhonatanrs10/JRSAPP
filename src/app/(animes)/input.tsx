@@ -18,6 +18,7 @@ import Colors from '../../constants/Colors';
 import { useColorScheme } from '../../components/useColorScheme';
 import { salvarAnime, buscarAnimes, atualizarAnime } from '../../database/db';
 import { FontAwesome } from '@expo/vector-icons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Clipboard from 'expo-clipboard';
 import ButtonTT from '../../components/Jhonatanrs/ButtonTT';
 
@@ -269,9 +270,9 @@ export default function AnimesInput() {
             <TouchableOpacity
               onPress={handlePasteLink}
               onLongPress={() => setLink('')}
-              style={[styles.buttonInInput, { height: 60, backgroundColor: colors.inputBackground }]}
+              style={[styles.buttonInInput, {width: 40, height: 60, backgroundColor: colors.info}]}
             >
-              <FontAwesome name="paste" size={20} color={colors.info} />
+              <MaterialIcons name="content-paste" size={20} color="white" />
             </TouchableOpacity>
           </View>
         </View>
