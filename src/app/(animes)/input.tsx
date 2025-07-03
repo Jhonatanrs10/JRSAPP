@@ -266,11 +266,6 @@ export default function AnimesInput() {
               backgroundColor: colors.background,
               color: colors.text
             }}
-            textInputStyle={{
-              backgroundColor: colors.inputBackground,
-              color: colors.text,
-              borderColor: colors.borderColor,
-            }}
           />
         </View>
 

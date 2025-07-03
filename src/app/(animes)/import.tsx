@@ -85,7 +85,9 @@ export default function Import() {
       // Usar animesCarregados para evitar nova busca no DB
       const animes = animesCarregados;
 
-      const cabecalho = 'Nome;Status;DiaLançamento;Observacao;Link;Seasons\n';
+      animes.sort((a, b) => a.id - b.id);
+
+      const cabecalho = 'Nome;Status;DiaLançamento;Observação;Link;Temporadas\n';
 
       const linhas = animes.map(a => {
         const escapeAndQuote = (value: string | number | null): string => {
@@ -161,11 +163,11 @@ export default function Import() {
       const cabecalhoLinha = linhas[0].trim();
       const cabecalho = cabecalhoLinha.split(';').map(h => h.trim());
 
-      const camposEsperados = ['Nome', 'Status', 'DiaLançamento', 'Observacao', 'Link', 'Seasons'];
+      const camposEsperados = ['Nome', 'Status', 'DiaLançamento', 'Observação', 'Link', 'Temporadas'];
       const camposValidos = camposEsperados.every(campo => cabecalho.includes(campo));
 
       if (!camposValidos) {
-        Alert.alert('Erro', 'Formato de arquivo inválido. Verifique se o arquivo tem o cabeçalho correto com os campos essenciais: Nome, Status, DiaLançamento, Observacao, Link, Seasons (separado por ponto e vírgula).');
+        Alert.alert('Erro', 'Formato de arquivo inválido. Verifique se o arquivo tem o cabeçalho correto com os campos essenciais: Nome, Status, DiaLançamento, Observação, Link, Temporadas (separado por ponto e vírgula).');
         return;
       }
 
@@ -237,9 +239,9 @@ export default function Import() {
           const nome = valores[cabecalho.indexOf('Nome')];
           if (!nome) throw new Error('Nome do anime não pode ser vazio.');
 
-          const observacao = valores[cabecalho.indexOf('Observacao')] || null;
+          const observacao = valores[cabecalho.indexOf('Observação')] || null;
           const link = valores[cabecalho.indexOf('Link')] || null;
-          const seasons = valores[cabecalho.indexOf('Seasons')] || null;
+          const seasons = valores[cabecalho.indexOf('Temporadas')] || null;
 
           const dadosAnime: Omit<Anime, 'id'> = {
             nome: nome,

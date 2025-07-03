@@ -1,15 +1,14 @@
 import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle, useCallback } from 'react';
 import {
   StyleSheet,
-  View, // Changed from ScrollView
+  View,
   Text,
-  TextInput,
-  KeyboardAvoidingView,
+  TouchableOpacity,
+  Alert,
   Platform,
+  KeyboardAvoidingView,
   ViewStyle,
   TextStyle,
-  TouchableOpacity,
-  Alert, // Make sure Alert is imported for any validation messages
 } from 'react-native';
 
 import Colors from '../../constants/Colors';
@@ -17,7 +16,7 @@ import { useColorScheme } from '../../components/useColorScheme';
 
 interface SeasonItem {
   id: number;
-  value: string;
+  value: number;
 }
 
 export interface DynamicSeasonInputRef {
@@ -30,7 +29,6 @@ interface DynamicSeasonInputProps {
   onChange: (seasons: number[]) => void;
   initialValues?: number[];
   style?: ViewStyle;
-  textInputStyle?: TextStyle;
   labelStyle?: TextStyle;
   seasonContainerStyle?: ViewStyle;
   addButtonStyle?: ViewStyle;
@@ -39,39 +37,56 @@ interface DynamicSeasonInputProps {
 
 const DynamicSeasonInput = forwardRef<DynamicSeasonInputRef, DynamicSeasonInputProps>(
   (
-    { onChange, initialValues = [], style, textInputStyle, labelStyle, seasonContainerStyle,
-      addButtonStyle, addButtonTextStyle },
+    { onChange, initialValues = [], style, labelStyle, seasonContainerStyle },
     ref
   ) => {
     const colorScheme = useColorScheme() ?? 'light';
     const colors = Colors[colorScheme];
 
+    // --- MUDANÇA AQUI: Centralizando a gestão do ID ---
+    // Usamos um useRef para um contador de IDs que persiste entre re-renderizações.
+    // Inicializamos ele uma única vez para garantir IDs sequenciais e únicos.
+    const uniqueIdCounter = useRef(0);
+
+    // Função para obter o próximo ID único
+    const getNextId = useCallback(() => {
+        uniqueIdCounter.current += 1;
+        return uniqueIdCounter.current;
+    }, []);
+
+
     const [seasons, setSeasons] = useState<SeasonItem[]>(() => {
+      // Quando o componente monta pela primeira vez ou initialValues são passados,
+      // precisamos gerar IDs únicos para eles.
       if (initialValues.length > 0) {
-        const initialSeasonItems = initialValues.map((val, index) => ({
-          id: index + 1,
-          value: String(val),
+        // Mapeia os valores iniciais para SeasonItems com IDs únicos.
+        // É importante que getNextId() seja chamado para cada um aqui.
+        const initialSeasonItems = initialValues.map(val => ({
+          id: getNextId(), // Garante um ID único para cada item inicial
+          value: val,
         }));
+
+        // Adiciona um campo vazio extra se o último campo inicial tiver um valor > 0.
+        // O ID deste campo também será único.
         const lastInitialValue = initialSeasonItems[initialSeasonItems.length - 1];
-        if (lastInitialValue && parseInt(lastInitialValue.value) > 0) {
-          initialSeasonItems.push({ id: initialSeasonItems.length + 1, value: '' });
+        if (lastInitialValue && lastInitialValue.value > 0) {
+          initialSeasonItems.push({ id: getNextId(), value: 0 });
         }
         return initialSeasonItems;
       }
-      return [{ id: 1, value: '' }];
+      // Se não houver valores iniciais, começa com um único campo vazio com um ID único.
+      return [{ id: getNextId(), value: 0 }];
     });
 
-    // Removed scrollViewRef as ScrollView is no longer used.
+    // Removido o useEffect para idCounterRef.current, pois o contador agora é gerido internamente
+    // e inicializado de forma mais robusta no useState.
 
-    const getNextId = useCallback(() => {
-      return seasons.length > 0 ? Math.max(...seasons.map(s => s.id)) + 1 : 1;
-    }, [seasons]);
+    const intervalRef = useRef<NodeJS.Timeout | number | null>(null);
 
     const getParsedValues = useCallback((items: SeasonItem[]): number[] => {
       return items
-        .filter(s => s.value !== '')
-        .map(s => parseInt(s.value))
-        .filter(value => !isNaN(value) && value > 0);
+        .filter(s => s.value > 0)
+        .map(s => s.value);
     }, []);
 
     useEffect(() => {
@@ -79,107 +94,117 @@ const DynamicSeasonInput = forwardRef<DynamicSeasonInputRef, DynamicSeasonInputP
       onChange(currentParsedValues);
     }, [seasons, onChange, getParsedValues]);
 
-    const handleSeasonChange = useCallback((id: number, text: string) => {
-      const cleanedText = text.replace(/[^0-9]/g, '');
+    const applySeasonLogic = useCallback((updatedSeasons: SeasonItem[]) => {
+      const lastFilledIndex = updatedSeasons.reduce((acc, season, index) => {
+        if (season.value > 0) return index;
+        return acc;
+      }, -1);
 
+      if (lastFilledIndex !== updatedSeasons.length - 1 && lastFilledIndex !== -1) {
+        updatedSeasons = updatedSeasons.slice(0, lastFilledIndex + 1);
+      }
+
+      const lastSeasonItem = updatedSeasons[updatedSeasons.length - 1];
+      if (lastSeasonItem && lastSeasonItem.value > 0) {
+        updatedSeasons.push({ id: getNextId(), value: 0 });
+      } else if (updatedSeasons.length === 0) {
+        updatedSeasons.push({ id: getNextId(), value: 0 });
+      }
+      return updatedSeasons;
+    }, [getNextId]);
+
+    const changeSeasonValue = useCallback((id: number, amount: number) => {
       setSeasons(prevSeasons => {
-        let updatedSeasons = prevSeasons.map(season =>
-          season.id === id ? { ...season, value: cleanedText } : season
+        const updatedSeasons = prevSeasons.map(season =>
+          season.id === id ? { ...season, value: Math.max(0, season.value + amount) } : season
         );
-
-        const lastFilledIndex = updatedSeasons.reduce((acc, season, index) => {
-          if (parseInt(season.value) > 0) return index;
-          return acc;
-        }, -1);
-
-        if (lastFilledIndex !== updatedSeasons.length - 1 && lastFilledIndex !== -1) {
-          updatedSeasons = updatedSeasons.slice(0, lastFilledIndex + 1);
-        }
-
-        const lastSeasonItem = updatedSeasons[updatedSeasons.length - 1];
-        if (lastSeasonItem && parseInt(lastSeasonItem.value) > 0) {
-          updatedSeasons.push({ id: getNextId(), value: '' });
-        } else if (updatedSeasons.length === 0) {
-          updatedSeasons.push({ id: getNextId(), value: '' });
-        }
-
-        return updatedSeasons;
+        return applySeasonLogic(updatedSeasons);
       });
-    }, [getNextId]);
+    }, [applySeasonLogic]);
 
-    const addSeasonInput = useCallback(() => {
-      setSeasons(prevSeasons => {
-        const lastSeason = prevSeasons[prevSeasons.length - 1];
-        if (lastSeason && parseInt(lastSeason.value) > 0) {
-          return [...prevSeasons, { id: getNextId(), value: '' }];
-        }
-        return prevSeasons;
-      });
-    }, [getNextId]);
+    const handlePressIn = useCallback((id: number, initialAmount: number, intervalAmount: number) => {
+      changeSeasonValue(id, initialAmount);
+
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current as number);
+      }
+
+      intervalRef.current = setInterval(() => {
+        changeSeasonValue(id, intervalAmount);
+      }, 250);
+    }, [changeSeasonValue]);
+
+    const handlePressOut = useCallback(() => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current as number);
+        intervalRef.current = null;
+      }
+    }, []);
 
     const removeSeasonInput = useCallback((id: number) => {
       setSeasons(prevSeasons => {
         const updatedSeasons = prevSeasons.filter(season => season.id !== id);
         if (updatedSeasons.length === 0) {
-          return [{ id: getNextId(), value: '' }];
+          return [{ id: getNextId(), value: 0 }];
         }
-        return updatedSeasons;
+        return applySeasonLogic(updatedSeasons);
       });
-    }, [getNextId]);
+    }, [getNextId, applySeasonLogic]);
 
     useImperativeHandle(ref, () => ({
       getFilledSeasons: () => getParsedValues(seasons),
       clearAllSeasons: () => {
-        const defaultState = [{ id: getNextId(), value: '' }];
-        setSeasons(defaultState);
+        setSeasons([{ id: getNextId(), value: 0 }]);
       },
       setInitialSeasons: (newInitialValues = []) => {
         if (newInitialValues && newInitialValues.length > 0) {
-          const initialSeasonItems = newInitialValues.map((val, index) => ({ id: getNextId() + index, value: String(val) }));
+          // Ao definir novos valores iniciais, REGENERE TODOS os IDs para evitar conflitos
+          const initialSeasonItems = newInitialValues.map(val => ({ id: getNextId(), value: val }));
           const lastInitialValue = initialSeasonItems[initialSeasonItems.length - 1];
-          if (lastInitialValue && parseInt(lastInitialValue.value) > 0) {
-            initialSeasonItems.push({ id: getNextId() + initialSeasonItems.length, value: '' });
+          if (lastInitialValue && lastInitialValue.value > 0) {
+            initialSeasonItems.push({ id: getNextId(), value: 0 });
           }
-          setSeasons(initialSeasonItems);
+          setSeasons(applySeasonLogic(initialSeasonItems));
         } else {
-          setSeasons([{ id: getNextId(), value: '' }]);
+          setSeasons([{ id: getNextId(), value: 0 }]);
         }
       },
     }));
-
-    // Removed useEffect for scrolling as ScrollView is no longer used.
 
     return (
       <KeyboardAvoidingView
         style={[styles.container, style]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <View // Changed from ScrollView
-          style={styles.contentContainer} // Using a simpler name, matching scrollViewContent
-          // Removed keyboardShouldPersistTaps
-        >
+        <View style={styles.contentContainer}>
           {seasons.map((season, index) => (
+            // A chave é o ID único da temporada, garantido pelo getNextId
             <View key={season.id}>
               <Text style={[styles.label, labelStyle, { color: colors.text }]}>Temporada {index + 1}:</Text>
-              <View style={[styles.seasonGroup, seasonContainerStyle, { backgroundColor: colors.inputBackground}]}>
-                <TextInput
+              <View style={[styles.seasonGroup, seasonContainerStyle, { backgroundColor: colors.inputBackground }]}>
+
+                <TouchableOpacity
+                  onPressIn={() => handlePressIn(season.id, -1, -10)}
+                  onPressOut={handlePressOut}
+                  style={[styles.valueButton, { backgroundColor: colors.primary }]}
+                >
+                  <Text style={styles.valueButtonText}>-</Text>
+                </TouchableOpacity>
+
+                <Text
                   style={[
-                    styles.input,
-                    textInputStyle,
+                    styles.valueDisplay,
                     {
                       borderColor: colors.borderColor,
                       color: colors.text,
                       backgroundColor: colors.inputBackground,
                     },
                   ]}
-                  onChangeText={text => handleSeasonChange(season.id, text)}
-                  value={season.value}
-                  keyboardType="numeric"
-                  placeholder={`Número de Episódios`}
-                  placeholderTextColor={colors.text}
-                  onBlur={() => {}}
-                />
-                {seasons.length > 1 && (
+                >
+                  {season.value > 0 ? season.value : '0'}
+                </Text>
+
+                {seasons.length < 0 && (
                   <TouchableOpacity
                     onPress={() => removeSeasonInput(season.id)}
                     style={[styles.removeButton, { backgroundColor: colors.error }]}
@@ -187,6 +212,14 @@ const DynamicSeasonInput = forwardRef<DynamicSeasonInputRef, DynamicSeasonInputP
                     <Text style={styles.removeButtonText}>X</Text>
                   </TouchableOpacity>
                 )}
+
+                <TouchableOpacity
+                  onPressIn={() => handlePressIn(season.id, 1, 10)}
+                  onPressOut={handlePressOut}
+                  style={[styles.valueButton, { backgroundColor: colors.primary }]}
+                >
+                  <Text style={styles.valueButtonText}>+</Text>
+                </TouchableOpacity>
               </View>
             </View>
           ))}
@@ -201,9 +234,10 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
   },
-  contentContainer: { // Renamed from scrollViewContent, removed scrollView
-    flexGrow: 0, // To allow content to expand within KeyboardAvoidingView
+  contentContainer: {
+    flexGrow: 0,
     paddingBottom: 20,
+    justifyContent: 'center'
   },
   seasonGroup: {
     flexDirection: 'row',
@@ -220,22 +254,37 @@ const styles = StyleSheet.create({
     minWidth: 80,
     fontSize: 16,
     fontWeight: '500',
-    marginBottom:10
+    marginBottom: 10
   },
-  input: {
-    flex: 1,
-    paddingHorizontal: 15,
-    borderRadius: 0,
-    borderWidth: 0,
-    fontSize: 16,
-  },
-  removeButton: {
-    margin: 20,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+  valueButton: {
+    width: 40,
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
+    borderRadius: 0,
+  },
+  valueButtonText: {
+    color: 'white',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  valueDisplay: {
+    flex: 1,
+    paddingHorizontal: 15,
+    textAlign: 'center',
+    fontSize: 16,
+    borderRadius: 0,
+    borderWidth: 0,
+    height: '100%',
+    textAlignVertical: 'center',
+    backgroundColor: 'transparent',
+  },
+  removeButton: {
+    width: 45,
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 0,
   },
   removeButtonText: {
     color: 'white',

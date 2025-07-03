@@ -231,6 +231,8 @@ export default function Import() {
       setExportando(true);
       const transacoes = await buscarTransacoes() as Transacao[];
 
+      transacoes.sort((a, b) => a.id - b.id); 
+
       const cabecalho = 'Descrição;Caixa;Categoria;Quantidade;Valor;Tipo;Ação;Data\n';
 
       const linhas = transacoes.map(t => {
