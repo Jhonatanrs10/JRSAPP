@@ -95,27 +95,48 @@ const AnimeItem: React.FC<AnimeItemProps> = ({ anime, colors, abrirLink, editarA
           <View style={[styles.detalheItem,{backgroundColor: colors.inputBackground,flexDirection: 'row', justifyContent: 'space-between',flexShrink: 1}]}>
             <Text style={[styles.detalheLabel, { color: colors.text }]}>Episódios:</Text>
             <Text style={[styles.detalheValor, { color: colors.text, flexShrink: 1, marginStart: 10}]}>
-              {(() => {
-                if (!anime.seasons || anime.seasons.trim() === '') {
-                  return 'N/A';
-                }
+  {(() => {
+    if (!anime.seasons || anime.seasons.trim() === '') {
+      return 'N/A';
+    }
 
-                try {
-                  const parsedSeasons = JSON.parse(anime.seasons);
+    try {
+      const parsedSeasons = JSON.parse(anime.seasons);
 
-                  if (Array.isArray(parsedSeasons) && parsedSeasons.length > 0) {
-                    return parsedSeasons.join(', ');
-                  } else if (Array.isArray(parsedSeasons) && parsedSeasons.length === 0) {
-                    return 'Nenhum';
-                  } else {
-                    return 'Formato inválido';
-                  }
-                } catch (e) {
-                  console.error("Erro ao processar seasons:", e, anime.seasons);
-                  return 'Erro';
-                }
-              })()}
-            </Text>
+      if (Array.isArray(parsedSeasons) && parsedSeasons.length > 0) {
+        
+        // 1. Converte e filtra apenas números inteiros válidos
+        const episodiosPorTemporada = parsedSeasons
+          .map(Number)
+          .filter(n => Number.isInteger(n) && n >= 0);
+
+        // 2. Cria a string das temporadas separadas por vírgula
+        const temporadasSeparadas = episodiosPorTemporada.join(', ');
+
+        // 3. Verifica a condição: Só mostra a soma se houver mais de 1 elemento na lista
+        if (episodiosPorTemporada.length > 1) {
+            
+            // 4. Soma todos os episódios (somente se a condição for satisfeita)
+            const somaTotalEpisodios = episodiosPorTemporada.reduce((acumulador, valorAtual) => acumulador + valorAtual, 0);
+
+            // Retorna com a soma
+            return `${temporadasSeparadas} (${somaTotalEpisodios})`;
+        }
+
+        // Retorna SEM a soma (para 1 temporada)
+        return temporadasSeparadas;
+
+      } else if (Array.isArray(parsedSeasons) && parsedSeasons.length === 0) {
+        return 'Nenhum';
+      } else {
+        return 'Formato inválido';
+      }
+    } catch (e) {
+      console.error("Erro ao processar seasons:", e, anime.seasons);
+      return 'Erro';
+    }
+  })()}
+</Text>
           </View>
         )}
         {anime.observacao && (

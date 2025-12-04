@@ -23,6 +23,7 @@ import Colors from '../../constants/Colors';
 import { useColorScheme } from '../../components/useColorScheme';
 import { useFocusEffect } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { QuantityInput } from '@/src/components/QuantityInput';
 
 type TipoTransacao = 'PIX' | 'Dinheiro' | 'Boleto' | 'Débito' | 'Crédito' | 'TED' | 'DOC' | 'Distinto';
 type Acao = 'entrada' | 'saida';
@@ -65,6 +66,32 @@ export default function Input() {
   // NOVOS ESTADOS PARA MODAIS
   const [showCaixaModal, setShowCaixaModal] = useState(false);
   const [showCategoriaModal, setShowCategoriaModal] = useState(false);
+
+  // Funções de incremento e decremento
+  const handleIncrement = () => {
+    const numericValue = parseInt(quantidade || '0', 10);
+    setQuantidade(String(numericValue + 1));
+  };
+
+  const handleDecrement = () => {
+    const numericValue = parseInt(quantidade || '0', 10);
+    if (numericValue > 1) { // Evita valores negativos ou zero
+      setQuantidade(String(numericValue - 1));
+    }
+  };
+
+  // Funções de incremento e decremento2
+  const handleIncrement2 = () => {
+    const numericValue = parseInt(quantidade || '0', 10);
+    setQuantidade(String(numericValue + 10));
+  };
+
+  const handleDecrement2 = () => {
+    const numericValue = parseInt(quantidade || '0', 10);
+    const calculatedValue = numericValue - 10;
+    const newValue = Math.max(1, calculatedValue);
+    setQuantidade(String(newValue));
+};
 
   // Função para obter a data atual formatada
   const getTodayDate = useCallback(() => {
@@ -325,12 +352,12 @@ export default function Input() {
 
         <View style={styles.inputContainer}>
           <Text style={[styles.label, { color: colors.text }]}>Quantidade</Text>
-          <ThemedInput
+          <QuantityInput
             value={quantidade}
-            onChangeText={handleQuantidadeChange}
-            keyboardType="numeric"
-            placeholder="Digite a quantidade"
-            placeholderTextColor={colors.text}
+            onIncrement={handleIncrement}
+            onDecrement={handleDecrement}
+            onIncrement2={handleIncrement2}
+            onDecrement2={handleDecrement2}
           />
         </View>
 

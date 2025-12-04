@@ -21,7 +21,7 @@ import { FontAwesome } from '@expo/vector-icons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Clipboard from 'expo-clipboard';
 import ButtonTT from '../../components/Jhonatanrs/ButtonTT';
-
+import { ThemedToggle, ToggleOption } from '../../components/ThemedToggle';
 import DynamicSeasonInput from '../../components/Jhonatanrs/DynamicSeasonInput';
 import type { DynamicSeasonInputRef } from '../../components/Jhonatanrs/DynamicSeasonInput';
 
@@ -54,6 +54,11 @@ export default function AnimesInput() {
   const dynamicInputRef = useRef<DynamicSeasonInputRef | null>(null);
 
   const [animeSendoEditado, setAnimeSendoEditado] = useState<Anime | null>(null);
+
+  const statusOptions: ToggleOption<StatusAnime>[] = [
+    { label: "Assistindo", value: "assistindo" },
+    { label: "Já Assistido", value: "já assistido" },
+  ];
 
   const limparCampos = useCallback(() => {
     setNomeAnime('');
@@ -218,13 +223,11 @@ export default function AnimesInput() {
 
         <View style={styles.inputContainer}>
           <Text style={[styles.label, { color: colors.text }]}>Status</Text>
-          <ThemedPicker
+          <ThemedToggle<StatusAnime>
+            options={statusOptions}
             selectedValue={status}
-            onValueChange={(itemValue) => setStatus(itemValue as StatusAnime)}
-          >
-            <ThemedPicker.Item label="Assistindo" value="assistindo" />
-            <ThemedPicker.Item label="Já Assistido" value="já assistido" />
-          </ThemedPicker>
+            onValueChange={setStatus}
+          />
         </View>
 
         <View style={styles.inputContainer}>
