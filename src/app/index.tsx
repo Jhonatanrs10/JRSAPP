@@ -7,8 +7,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Colors from '../constants/Colors';
 import { useColorScheme } from '../components/useColorScheme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context'; // Importe useSafeAreaInsets
+import Constants from 'expo-constants';
 
 export default function HomeScreen() {
+  const version = Constants.expoConfig?.version || '1.0.0';
+
   const router = useRouter();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
@@ -42,8 +45,8 @@ export default function HomeScreen() {
         <View style={styles.spacer} />
 
         <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', marginTop: 50 }}>
-          <Text style={{ color: "white", fontSize: 10, fontWeight: 'bold' }}>Copyright © 2025 JRSAPP. Todos os direitos reservados.</Text>
-          <Text style={{ color: "white", fontSize: 8 }}>By Jhonatanrs</Text>
+          <Text style={{ color: "white", fontSize: 10, fontWeight: 'bold' }}>Copyright © 2026 JRSAPP. Todos os direitos reservados.</Text>
+          <Text style={{ color: "white", fontSize: 8 }}>Version {version} By Jhonatanrs</Text>
         </View>
 
       </ScrollView>
