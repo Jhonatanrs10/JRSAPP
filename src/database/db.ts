@@ -294,7 +294,7 @@ export async function deletarProduto(id: number) {
 interface Anime {
   id: number;
   nome: string;
-  status: 'assistindo' | 'já assistido';
+  status: 'assistindo' | 'já assistido' | 'pra assistir';
   release_day: 'segunda' | 'terça' | 'quarta' | 'quinta' | 'sexta' | 'sábado' | 'domingo';
   observacao: string | null;
   link: string | null;

@@ -28,6 +28,7 @@ export interface DynamicSeasonInputRef {
 interface DynamicSeasonInputProps {
   onChange: (seasons: number[]) => void;
   initialValues?: number[];
+  labelPrefix?: string;
   style?: ViewStyle;
   labelStyle?: TextStyle;
   seasonContainerStyle?: ViewStyle;
@@ -37,7 +38,7 @@ interface DynamicSeasonInputProps {
 
 const DynamicSeasonInput = forwardRef<DynamicSeasonInputRef, DynamicSeasonInputProps>(
   (
-    { onChange, initialValues = [], style, labelStyle, seasonContainerStyle },
+    { onChange, initialValues = [], labelPrefix = "Season", style, labelStyle, seasonContainerStyle },
     ref
   ) => {
     const colorScheme = useColorScheme() ?? 'light';
@@ -180,7 +181,7 @@ const DynamicSeasonInput = forwardRef<DynamicSeasonInputRef, DynamicSeasonInputP
           {seasons.map((season, index) => (
             // A chave é o ID único da temporada, garantido pelo getNextId
             <View key={season.id}>
-              <Text style={[styles.label, labelStyle, { color: colors.text }]}>Temporada {index + 1}:</Text>
+              <Text style={[styles.label, labelStyle, { color: colors.text }]}>{labelPrefix} {index + 1}:</Text>
               <View style={[styles.seasonGroup, seasonContainerStyle, { backgroundColor: colors.inputBackground }]}>
 
                 <TouchableOpacity

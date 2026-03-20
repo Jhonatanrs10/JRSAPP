@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState, useEffect, useCallback } from 'react';
 import ButtonTT from '../../components/Jhonatanrs/ButtonTT';
 import {
@@ -20,8 +21,8 @@ import Colors from '../../constants/Colors';
 import { useColorScheme } from '../../components/useColorScheme';
 import { FontAwesome } from '@expo/vector-icons';
 
-type StatusAnime = 'assistindo' | 'já assistido';
-type ReleaseDay = 'segunda' | 'terça' | 'quarta' | 'quinta' | 'sexta' | 'sábado' | 'domingo';
+type StatusAnime = 'watching' | 'completed' | 'plan_to_watch';
+type ReleaseDay = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
 
 interface Anime {
   id: number;
@@ -43,6 +44,7 @@ interface AnimeItemProps {
 }
 
 const AnimeItem: React.FC<AnimeItemProps> = ({ anime, colors, abrirLink, editarAnime, confirmarExclusao }) => {
+  const { t } = useTranslation();
   return (
     <View
       style={[
@@ -59,89 +61,95 @@ const AnimeItem: React.FC<AnimeItemProps> = ({ anime, colors, abrirLink, editarA
         }
       ]}
     >
-      <View style={[styles.animeHeader,{backgroundColor: colors.inputBackground}]}>
-        <View style={[styles.animeInfoPrincipal,{backgroundColor: colors.inputBackground}]}>
+      <View style={[styles.animeHeader, { backgroundColor: colors.inputBackground }]}>
+        <View style={[styles.animeInfoPrincipal, { backgroundColor: colors.inputBackground }]}>
           <Text style={[styles.animeNome, { color: colors.text }]}>
             {anime.nome}
           </Text>
           <Text style={[
             styles.animeStatus,
             {
-              color: anime.status === 'assistindo' ? colors.info : colors.success,
-              backgroundColor: anime.status === 'assistindo'
-                ? `${colors.info}20`
-                : `${colors.success}20`,
+             color: anime.status === 'watching' ? colors.info : 
+           anime.status === 'completed' ? colors.success : 
+           colors.warning2, // Cor para plan_to_watch
+    backgroundColor: anime.status === 'watching' ? `${colors.info}20` : 
+                     anime.status === 'completed' ? `${colors.success}20` : 
+                     `${colors.warning2}20`,
               paddingHorizontal: 10,
               paddingVertical: 5,
               borderRadius: 8,
               overflow: 'hidden'
             }
           ]}>
-            {anime.status === 'assistindo' ? 'Assistindo' : 'Já Assistido'}
+            {anime.status === 'watching'
+              ? t('status.watching')
+              : anime.status === 'completed'
+                ? t('status.completed')
+                : t('status.plan_to_watch')}
           </Text>
         </View>
       </View>
 
       <View style={[styles.animeDetalhes, { borderTopColor: colors.borderColor, backgroundColor: colors.inputBackground }]}>
         {anime.release_day && (
-          <View style={[styles.detalheItem,{backgroundColor: colors.inputBackground}]}>
-            <Text style={[styles.detalheLabel, { color: colors.text }]}>Dia de Lançamento:</Text>
+          <View style={[styles.detalheItem, { backgroundColor: colors.inputBackground }]}>
+            <Text style={[styles.detalheLabel, { color: colors.text }]}>{t('item.release')}:</Text>
             <Text style={[styles.detalheValor, { color: colors.text }]}>
-              {anime.release_day.charAt(0).toUpperCase() + anime.release_day.slice(1)}
+              {t(`release.${anime.release_day}`)}
             </Text>
           </View>
         )}
         {anime.seasons && (
-          <View style={[styles.detalheItem,{backgroundColor: colors.inputBackground,flexDirection: 'row', justifyContent: 'space-between',flexShrink: 1}]}>
-            <Text style={[styles.detalheLabel, { color: colors.text }]}>Episódios:</Text>
-            <Text style={[styles.detalheValor, { color: colors.text, flexShrink: 1, marginStart: 10}]}>
-  {(() => {
-    if (!anime.seasons || anime.seasons.trim() === '') {
-      return 'N/A';
-    }
+          <View style={[styles.detalheItem, { backgroundColor: colors.inputBackground, flexDirection: 'row', justifyContent: 'space-between', flexShrink: 1 }]}>
+            <Text style={[styles.detalheLabel, { color: colors.text }]}>{t('item.episodes')}:</Text>
+            <Text style={[styles.detalheValor, { color: colors.text, flexShrink: 1, marginStart: 10 }]}>
+              {(() => {
+                if (!anime.seasons || anime.seasons.trim() === '') {
+                  return 'N/A';
+                }
 
-    try {
-      const parsedSeasons = JSON.parse(anime.seasons);
+                try {
+                  const parsedSeasons = JSON.parse(anime.seasons);
 
-      if (Array.isArray(parsedSeasons) && parsedSeasons.length > 0) {
-        
-        // 1. Converte e filtra apenas números inteiros válidos
-        const episodiosPorTemporada = parsedSeasons
-          .map(Number)
-          .filter(n => Number.isInteger(n) && n >= 0);
+                  if (Array.isArray(parsedSeasons) && parsedSeasons.length > 0) {
 
-        // 2. Cria a string das temporadas separadas por vírgula
-        const temporadasSeparadas = episodiosPorTemporada.join(', ');
+                    // 1. Converte e filtra apenas números inteiros válidos
+                    const episodiosPorTemporada = parsedSeasons
+                      .map(Number)
+                      .filter(n => Number.isInteger(n) && n >= 0);
 
-        // 3. Verifica a condição: Só mostra a soma se houver mais de 1 elemento na lista
-        if (episodiosPorTemporada.length > 1) {
-            
-            // 4. Soma todos os episódios (somente se a condição for satisfeita)
-            const somaTotalEpisodios = episodiosPorTemporada.reduce((acumulador, valorAtual) => acumulador + valorAtual, 0);
+                    // 2. Cria a string das temporadas separadas por vírgula
+                    const temporadasSeparadas = episodiosPorTemporada.join(', ');
 
-            // Retorna com a soma
-            return `${temporadasSeparadas} (${somaTotalEpisodios})`;
-        }
+                    // 3. Verifica a condição: Só mostra a soma se houver mais de 1 elemento na lista
+                    if (episodiosPorTemporada.length > 1) {
 
-        // Retorna SEM a soma (para 1 temporada)
-        return temporadasSeparadas;
+                      // 4. Soma todos os episódios (somente se a condição for satisfeita)
+                      const somaTotalEpisodios = episodiosPorTemporada.reduce((acumulador, valorAtual) => acumulador + valorAtual, 0);
 
-      } else if (Array.isArray(parsedSeasons) && parsedSeasons.length === 0) {
-        return 'Nenhum';
-      } else {
-        return 'Formato inválido';
-      }
-    } catch (e) {
-      console.error("Erro ao processar seasons:", e, anime.seasons);
-      return 'Erro';
-    }
-  })()}
-</Text>
+                      // Retorna com a soma
+                      return `${temporadasSeparadas} (${somaTotalEpisodios})`;
+                    }
+
+                    // Retorna SEM a soma (para 1 temporada)
+                    return temporadasSeparadas;
+
+                  } else if (Array.isArray(parsedSeasons) && parsedSeasons.length === 0) {
+                    return t('return.none');
+                  } else {
+                    return t('return.invalid_format');
+                  }
+                } catch (e) {
+                  console.error("Error to process seasons:", e, anime.seasons);
+                  return t('return.error');
+                }
+              })()}
+            </Text>
           </View>
         )}
         {anime.observacao && (
-          <View style={[styles.detalheItem,{backgroundColor: colors.inputBackground}]}>
-            <Text style={[styles.detalheLabel, { color: colors.text }]}>Obs: </Text>
+          <View style={[styles.detalheItem, { backgroundColor: colors.inputBackground }]}>
+            <Text style={[styles.detalheLabel, { color: colors.text }]}>{t('item.obs')}: </Text>
             <Text style={[styles.detalheValor, { color: colors.text, flex: 1, flexWrap: 'wrap' }]}>{anime.observacao}</Text>
           </View>
         )}
@@ -149,17 +157,18 @@ const AnimeItem: React.FC<AnimeItemProps> = ({ anime, colors, abrirLink, editarA
 
       <View style={[styles.animeAcoes, { borderTopColor: colors.borderColor, backgroundColor: colors.inputBackground }]}>
         <ButtonTT
-          title="Assistir"
+          title={t('button.watch')}
           onPress={() => abrirLink(anime.link)}
           color={colors.info}
         />
         <ButtonTT
-          title="Sobre"
+          title={t('button.about')}
           onPress={() => abrirLink("https://myanimelist.net/search/all?q=" + anime.nome)}
+          onLongPress={() => abrirLink("https://anilist.co/search/anime?search=" + anime.nome)}
           color={colors.info}
         />
         <ButtonTT
-          title="Editar"
+          title={t('button.edit')}
           onPress={() => editarAnime(anime)}
           color={colors.info}
         />
@@ -175,35 +184,36 @@ const AnimeItem: React.FC<AnimeItemProps> = ({ anime, colors, abrirLink, editarA
 };
 // --- Fim do componente AnimeItem ---
 
+const dayOrder: { [key: string]: number } = {
+  'sunday': 0,
+  'monday': 1,
+  'tuesday': 2,
+  'wednesday': 3,
+  'thursday': 4,
+  'friday': 5,
+  'saturday': 6,
+};
 
 export default function MeusAnimes() {
+  const { t } = useTranslation();
+
   const [animes, setAnimes] = useState<Anime[]>([]);
   const [busca, setBusca] = useState('');
-  const [selectedDayFilter, setSelectedDayFilter] = useState<ReleaseDay | 'todos' | null>(null);
-
+  const [selectedDayFilter, setSelectedDayFilter] = useState<ReleaseDay | 'all' | 'plan_to_watch' | null>(null);
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const router = useRouter();
 
-  const dayOrder: { [key: string]: number } = {
-    'domingo': 0,
-    'segunda': 1,
-    'terça': 2,
-    'quarta': 3,
-    'quinta': 4,
-    'sexta': 5,
-    'sábado': 6,
-  };
-
-  const daysOfWeek: { label: string; value: ReleaseDay | 'todos' }[] = [
-    { label: 'Todos', value: 'todos' },
-    { label: 'Dom', value: 'domingo' },
-    { label: 'Seg', value: 'segunda' },
-    { label: 'Ter', value: 'terça' },
-    { label: 'Qua', value: 'quarta' },
-    { label: 'Qui', value: 'quinta' },
-    { label: 'Sex', value: 'sexta' },
-    { label: 'Sáb', value: 'sábado' },
+  const daysOfWeek: { label: string; value: ReleaseDay | 'all' }[] = [
+    { label: t('release.all'), value: 'all' },
+    { label: t('release.sunday_ab'), value: 'sunday' },
+    { label: t('release.monday_ab'), value: 'monday' },
+    { label: t('release.tuesday_ab'), value: 'tuesday' },
+    { label: t('release.wednesday_ab'), value: 'wednesday' },
+    { label: t('release.thursday_ab'), value: 'thursday' },
+    { label: t('release.friday_ab'), value: 'friday' },
+    { label: t('release.saturday_ab'), value: 'saturday' },
+    { label: '🔗', value: 'plan_to_watch' as const }
   ];
 
   async function carregarAnimes() {
@@ -211,8 +221,8 @@ export default function MeusAnimes() {
       const resultado = await buscarAnimes() as Anime[];
       setAnimes(resultado);
     } catch (error) {
-      console.error('Erro ao carregar animes:', error);
-      Alert.alert('Erro', 'Não foi possível carregar os animes');
+      console.error('Error to load animes:', error);
+      Alert.alert(t('return.error'), t('return.no_anime_found'));
     }
   }
 
@@ -224,21 +234,21 @@ export default function MeusAnimes() {
 
   const confirmarExclusao = useCallback(async (id: number) => {
     Alert.alert(
-      'Confirmar Exclusão',
-      'Tem certeza que deseja excluir este anime?',
+      t('return.confirm_delete'),
+      t('return.confirm_delete_anime'),
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { text: t('button.cancel'), style: 'cancel' },
         {
-          text: 'Excluir',
+          text: t('button.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
               await deletarAnime(id);
               await carregarAnimes();
-              Alert.alert('Sucesso', 'Anime excluído com sucesso!');
+              Alert.alert(t('button.del_success'), t('button.del_success_anime'));
             } catch (error) {
-              console.error('Erro ao excluir anime:', error);
-              Alert.alert('Erro', 'Não foi possível excluir o anime');
+              console.error('Error to delete anime:', error);
+              Alert.alert(t('return.error'), t('return.error_delete_anime'));
             }
           }
         }
@@ -261,61 +271,73 @@ export default function MeusAnimes() {
     });
   }, [router]); // Adicionado useCallback para estabilizar a função
 
-  const abrirLink = useCallback((url: string | null) => {
-    if (url) {
-      const prefixedUrl = url.startsWith('http://') || url.startsWith('https://') ? url : `https://${url}`;
-      Linking.openURL(prefixedUrl).catch((err) =>
-        Alert.alert('Erro', `Não foi possível abrir o link: ${err.message}`)
-      );
+const abrirLink = useCallback((url: string | null) => {
+  if (url) {
+    // 1. Regex para encontrar o início de um link (http ou https)
+    // Ela procura por 'http' e ignora tudo o que estiver antes.
+    const match = url.match(/https?:\/\/[^\s]+/);
+    
+    let finalUrl = "";
+
+    if (match) {
+      // Se encontrou algo começando com http/https, pega apenas essa parte
+      finalUrl = match[0];
     } else {
-      Alert.alert('Erro', 'Nenhum link fornecido para este anime.');
-    }
-  }, []); // Adicionado useCallback para estabilizar a função
-
-  const animesFiltrados = React.useMemo(() => {
-    let listaFiltrada = [...animes];
-
-    if (busca) {
-      const termoBuscaLower = busca.toLowerCase();
-      listaFiltrada = listaFiltrada.filter(anime => {
-        return (
-          anime.nome.toLowerCase().includes(termoBuscaLower) ||
-          anime.status.toLowerCase().includes(termoBuscaLower) ||
-          (anime.observacao && anime.observacao.toLowerCase().includes(termoBuscaLower)) ||
-          (anime.seasons && anime.seasons.toLowerCase().includes(termoBuscaLower)) ||
-          (anime.link && anime.link.toLowerCase().includes(termoBuscaLower)) ||
-          (anime.release_day && anime.release_day.toLowerCase().includes(termoBuscaLower))
-        );
-      });
-      listaFiltrada.sort((a, b) => a.id - b.id);
-    } else {
-      if (selectedDayFilter === 'todos') {
-        listaFiltrada.sort((a, b) => b.id - a.id);
-      } else if (selectedDayFilter) {
-        listaFiltrada = listaFiltrada.filter(
-          (anime) => anime.status === 'assistindo' && anime.release_day === selectedDayFilter
-        );
-        listaFiltrada.sort((a, b) => b.id - a.id);
-      } else {
-        listaFiltrada = listaFiltrada.filter((anime) => anime.status === 'assistindo');
-        listaFiltrada.sort((a, b) => {
-          if (a.release_day === null && b.release_day !== null) return 1;
-          if (a.release_day !== null && b.release_day === null) return -1;
-          if (a.release_day === null && b.release_day === null) return b.id - a.id;
-          
-          const orderA = dayOrder[a.release_day as ReleaseDay];
-          const orderB = dayOrder[b.release_day as ReleaseDay];
-
-          if (orderA !== orderB) {
-            return orderA - orderB;
-          } else {
-            return b.id - a.id;
-          }
-        });
+      // 2. Se não encontrou http, mas existe texto, tenta limpar espaços e forçar https
+      const cleanUrl = url.trim();
+      if (cleanUrl) {
+        finalUrl = `https://${cleanUrl}`;
       }
     }
-    return listaFiltrada;
-  }, [animes, busca, selectedDayFilter, dayOrder]);
+
+    if (finalUrl) {
+      Linking.openURL(finalUrl).catch((err) =>
+        Alert.alert(t('return.error'), `${t('return.error_open_link')}: ${err.message}`)
+      );
+    } else {
+      Alert.alert(t('return.warning'), t('return.no_link'));
+    }
+  } else {
+    Alert.alert(t('return.warning'), t('return.no_link'));
+  }
+}, [t]); // Adicionado 't' como dependência para garantir tradução atualizada
+
+  const animesFiltrados = React.useMemo(() => {
+    let lista = [...animes];
+
+    // 1. Se estiver buscando, ignora os filtros de botões e pesquisa em tudo
+    if (busca) {
+      const termo = busca.toLowerCase();
+      return lista.filter(a => a.nome.toLowerCase().includes(termo)).sort((a, b) => a.id - b.id);
+    }
+
+    // 2. Se o botão "ALL" estiver ativo: Mostra TUDO (Watching + Plan + Completed)
+    if (selectedDayFilter === 'all') {
+      return lista.sort((a, b) => b.id - a.id);
+    }
+
+    // 3. Se o botão "Plan to Watch" estiver ativo: Mostra APENAS a fila
+    if (selectedDayFilter === 'plan_to_watch') {
+      return lista
+        .filter(a => a.status === 'plan_to_watch')
+        .sort((a, b) => b.id - a.id);
+    }
+
+    // 4. Se um DIA DA SEMANA estiver ativo: Mostra Watching que lançam naquele dia
+    if (selectedDayFilter && selectedDayFilter !== 'all') {
+      return lista
+        .filter(a => a.status === 'watching' && a.release_day === selectedDayFilter)
+        .sort((a, b) => b.id - a.id);
+    }
+
+    // 5. PADRÃO (Nenhum botão): Mostra apenas o que você está assistindo agora (Watching)
+    // Ordenado por dia da semana (segunda, terça...)
+    return lista.filter(a => a.status === 'watching').sort((a, b) => {
+      if (!a.release_day) return 1;
+      if (!b.release_day) return -1;
+      return dayOrder[a.release_day] - dayOrder[b.release_day] || b.id - a.id;
+    });
+  }, [animes, busca, selectedDayFilter]);
 
 
   return (
@@ -330,7 +352,7 @@ export default function MeusAnimes() {
               borderColor: colors.borderColor
             }
           ]}
-          placeholder="Buscar animes..."
+          placeholder={t('placeholder.search_animes')}
           placeholderTextColor={"gray"}
           value={busca}
           onChangeText={(text) => {
@@ -341,7 +363,7 @@ export default function MeusAnimes() {
       </View>
 
       {!busca && (
-        <View style={[styles.dayFilterContainer,{backgroundColor: colors.background}]}>
+        <View style={[styles.dayFilterContainer, { backgroundColor: colors.background }]}>
           <FlatList // Usando FlatList para os botões de filtro de dia horizontalmente
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -387,14 +409,14 @@ export default function MeusAnimes() {
           />
         )}
         ListEmptyComponent={() => ( // Componente exibido quando a lista está vazia
-          <Text style={[styles.noAnimesText, { color: colors.text }]}>Nenhum anime encontrado.</Text>
+          <Text style={[styles.noAnimesText, { color: colors.text }]}>{t('return.no_anime_found')}</Text>
         )}
         showsVerticalScrollIndicator={false}
         showsHorizontalScrollIndicator={false}
-        // Opcional: Adicionar props de performance se necessário (descomente para testar)
-        // initialNumToRender={10}
-        // maxToRenderPerBatch={5}
-        // windowSize={21}
+      // Opcional: Adicionar props de performance se necessário (descomente para testar)
+      // initialNumToRender={10}
+      // maxToRenderPerBatch={5}
+      // windowSize={21}
       />
     </View>
   );

@@ -13,15 +13,16 @@ interface ThemedToggleProps<T> {
   selectedValue: T;
   onValueChange: (value: T) => void;
   style?: ViewStyle; // Permite estilizar o container externo
+  activeColor?: string;
 }
 
 // O componente é genérico (<T>) para aceitar diferentes tipos de valores
-export function ThemedToggle<T>({ options, selectedValue, onValueChange, style }: ThemedToggleProps<T>) {
+export function ThemedToggle<T>({ options, selectedValue, onValueChange, style, activeColor }: ThemedToggleProps<T>) {
   const theme = useColorScheme() ?? 'light';
   const colors = Colors[theme];
   
   // O componente funciona melhor com 2 opções, mas aceita mais (exibindo as 2 primeiras)
-  const effectiveOptions = options.slice(0, 2);
+  const effectiveOptions = options.slice(0, 7);
 
   return (
     <View style={[styles.toggleContainer, style, { 
@@ -37,7 +38,7 @@ export function ThemedToggle<T>({ options, selectedValue, onValueChange, style }
             { backgroundColor: colors.inputBackground }, // Fundo padrão
             isSelected && { 
                 // Fundo quando selecionado: usa a cor primária para destaque
-                backgroundColor: colors.primary, 
+                backgroundColor: activeColor || colors.primary,
             },
         ];
 

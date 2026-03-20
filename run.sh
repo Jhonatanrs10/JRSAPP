@@ -70,6 +70,9 @@ install_dependencies() {
 		expo-camera \
 		expo-doctor \
 		expo-constants \
+		expo-localization \
+		i18next \
+		react-i18next \
 		-- --legacy-peer-deps
 
 	echo "Dependências instaladas com sucesso."

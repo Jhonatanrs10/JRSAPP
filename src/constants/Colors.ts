@@ -13,10 +13,12 @@ const Colors = {
     success: '#4CAF50',
     error: '#F44336',
     warning: '#FFC107',
+    warning2: '#800020',
     info: '#2196F3',
     primary: '#2196F3',
     grade1: '#f2fcfe',
     grade2: '#1c92d2',
+
   },
   dark: {
     text: '#fff',
@@ -34,6 +36,7 @@ const Colors = {
     success: '#81C784',
     error: '#E57373',
     warning: '#FFD54F',
+    warning2: '#800020',
     info: '#64B5F6',
     primary: '#64B5F6',
     grade1: '#373B44',

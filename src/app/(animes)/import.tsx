@@ -1,17 +1,18 @@
+import { useTranslation } from 'react-i18next';
 import { useState, useEffect, useCallback } from 'react'; // Importar useEffect e useCallback
 import ButtonTT from '../../components/Jhonatanrs/ButtonTT';
 import { Button, Alert, StyleSheet, Share, Platform, ActivityIndicator } from 'react-native'; // Adicionado ActivityIndicator
 import { Text, View } from '../../components/Themed';
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { salvarAnime, buscarAnimes, recriarTabelaAnimes } from '../../database/db';
 import Colors from '../../constants/Colors';
 import { useColorScheme } from '../../components/useColorScheme';
 import { useFocusEffect } from '@react-navigation/native'; // Para recarregar dados ao focar na tela
 
-type StatusAnime = 'assistindo' | 'já assistido';
-type ReleaseDay = 'segunda' | 'terça' | 'quarta' | 'quinta' | 'sexta' | 'sábado' | 'domingo';
+type StatusAnime = 'watching' | 'completed' | 'plan_to_watch';
+type ReleaseDay = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
 
 interface Anime {
   id: number;
@@ -24,6 +25,7 @@ interface Anime {
 }
 
 export default function Import() {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const [importando, setImportando] = useState(false);
@@ -33,8 +35,9 @@ export default function Import() {
 
   // --- Cálculos das Estatísticas ---
   const totalAnimes = animesCarregados.length;
-  const animesAssistindo = animesCarregados.filter(anime => anime.status === 'assistindo').length;
-  const animesJaAssistidos = animesCarregados.filter(anime => anime.status === 'já assistido').length;
+  const animes_watching = animesCarregados.filter(anime => anime.status === 'watching').length;
+  const animes_completed = animesCarregados.filter(anime => anime.status === 'completed').length;
+  const animes_plan_to_watch = animesCarregados.filter(anime => anime.status === 'plan_to_watch').length;
 
   const calcularTotalHoras = useCallback(() => {
     let totalEpisodios = 0;
@@ -64,8 +67,8 @@ export default function Import() {
       const animes = await buscarAnimes() as Anime[];
       setAnimesCarregados(animes);
     } catch (error) {
-      console.error('Erro ao carregar animes para estatísticas:', error);
-      Alert.alert('Erro', 'Não foi possível carregar os dados dos animes para estatísticas.');
+      console.error('Error loading anime for statistics:', error);
+      Alert.alert(t('return.error'), t('return.error_anime_stats'));
     } finally {
       setCarregandoDados(false);
     }
@@ -87,7 +90,8 @@ export default function Import() {
 
       animes.sort((a, b) => a.id - b.id);
 
-      const cabecalho = 'Nome;Status;Lançamento;Observação;Link;Temporadas\n';
+      //const cabecalho = 'Nome;Status;Lançamento;Observação;Link;Temporadas\n';
+      const cabecalho = 'Name;Status;Release;Obs;Link;Seasons\n';
 
       const linhas = animes.map(a => {
         const escapeAndQuote = (value: string | number | null): string => {
@@ -109,11 +113,11 @@ export default function Import() {
 
       const fileUri = FileSystem.cacheDirectory + nomeArquivo;
 
-      await FileSystem.writeAsStringAsync(fileUri, conteudo, { encoding: FileSystem.EncodingType.UTF8 });
+      await FileSystem.writeAsStringAsync(fileUri, conteudo, { encoding: 'utf8' });
 
       const isAvailable = await Sharing.isAvailableAsync();
       if (!isAvailable) {
-        Alert.alert('Erro', 'O compartilhamento de arquivos não está disponível nesta plataforma.');
+        Alert.alert(t('return.error'), t('return.error_share'));
         return;
       }
 
@@ -123,15 +127,15 @@ export default function Import() {
         dialogTitle: 'Salvar Animes',
       });
 
-      Alert.alert('Sucesso', 'Arquivo de animes gerado e pronto para ser salvo!');
+      Alert.alert(t('return.success'), t('return.success_export_anime'));
 
     } catch (error: unknown) {
-      console.error('Erro ao exportar animes:', error);
-      let errorMessage = 'Não foi possível exportar os animes.';
+      console.error('Error exporting anime:', error);
+      let errorMessage = t('return.error_export_anime');
       if (error instanceof Error) {
-        errorMessage = `Não foi possível exportar os animes: ${error.message}`;
+        errorMessage = `It was not possible to export the anime: ${error.message}`;
       }
-      Alert.alert('Erro', errorMessage);
+      Alert.alert(t('return.error'), errorMessage);
     } finally {
       setExportando(false);
     }
@@ -156,18 +160,18 @@ export default function Import() {
       const linhas = conteudo.split('\n');
 
       if (linhas.length === 0) {
-        Alert.alert('Erro', 'O arquivo está vazio.');
+        Alert.alert(t('return.error'), t('return.import_empty'));
         return;
       }
 
       const cabecalhoLinha = linhas[0].trim();
       const cabecalho = cabecalhoLinha.split(';').map(h => h.trim());
 
-      const camposEsperados = ['Nome', 'Status', 'Lançamento', 'Observação', 'Link', 'Temporadas'];
+      const camposEsperados = ['Name', 'Status', 'Release', 'Obs', 'Link', 'Seasons'];
       const camposValidos = camposEsperados.every(campo => cabecalho.includes(campo));
 
       if (!camposValidos) {
-        Alert.alert('Erro', 'Formato de arquivo inválido. Verifique se o arquivo tem o cabeçalho correto com os campos essenciais: Nome, Status, Lançamento, Observação, Link, Temporadas (separado por ponto e vírgula).');
+        Alert.alert(t('return.error'), t('return.error_import_format_anime'));
         return;
       }
 
@@ -214,34 +218,34 @@ export default function Import() {
         const todosIndicesValidos = indices.every(index => index !== -1 && index < valores.length);
 
         if (!todosIndicesValidos) {
-          console.log('Linha ignorada - campos essenciais faltando ou número incorreto de colunas:', linhas[i]);
-          let detail = 'Campos essenciais faltando ou número incorreto de colunas.';
-          linhasComErro.push(`Linha ${i + 1}: "${linhas[i].substring(0, Math.min(linhas[i].length, 50))}..." - ${detail}`);
+          console.log('Line skipped - essential fields missing or incorrect number of columns:', linhas[i]);
+          let detail = 'Essential fields are missing or the number of columns is incorrect.';
+          linhasComErro.push(`Line ${i + 1}: "${linhas[i].substring(0, Math.min(linhas[i].length, 50))}..." - ${detail}`);
           erros++;
           continue;
         }
 
         try {
-          const rawStatus = valores[cabecalho.indexOf('Status')];
-          const statusValues: StatusAnime[] = ['assistindo', 'já assistido'];
+          const rawStatus = valores[cabecalho.indexOf('Status')]?.toLowerCase();
+          const statusValues: StatusAnime[] = ['watching', 'completed', 'plan_to_watch'];
           if (!statusValues.includes(rawStatus as StatusAnime)) {
-            throw new Error(`Status inválido: "${rawStatus}"`);
+            throw new Error(`Invalid status: "${rawStatus}"`);
           }
           const status: StatusAnime = rawStatus as StatusAnime;
 
-          const rawReleaseDay = valores[cabecalho.indexOf('Lançamento')];
-          const releaseDayValues: ReleaseDay[] = ['segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado', 'domingo'];
+          const rawReleaseDay = valores[cabecalho.indexOf('Release')]?.toLowerCase();
+          const releaseDayValues: ReleaseDay[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
           if (!releaseDayValues.includes(rawReleaseDay as ReleaseDay)) {
-            throw new Error(`Dia de lançamento inválido: "${rawReleaseDay}"`);
+            throw new Error(`Invalid release date: "${rawReleaseDay}"`);
           }
           const release_day: ReleaseDay = rawReleaseDay as ReleaseDay;
 
-          const nome = valores[cabecalho.indexOf('Nome')];
-          if (!nome) throw new Error('Nome do anime não pode ser vazio.');
+          const nome = valores[cabecalho.indexOf('Name')];
+          if (!nome) throw new Error('The anime title cannot be empty.');
 
-          const observacao = valores[cabecalho.indexOf('Observação')] || null;
+          const observacao = valores[cabecalho.indexOf('Obs')] || null;
           const link = valores[cabecalho.indexOf('Link')] || null;
-          const seasons = valores[cabecalho.indexOf('Temporadas')] || null;
+          const seasons = valores[cabecalho.indexOf('Seasons')] || null;
 
           const dadosAnime: Omit<Anime, 'id'> = {
             nome: nome,
@@ -255,41 +259,41 @@ export default function Import() {
           await salvarAnime(dadosAnime);
           importadas++;
         } catch (error: unknown) {
-          console.error('Erro ao importar anime:', error, 'Linha:', linhas[i]);
+          console.error('Error importing anime: ', error, 'Line:', linhas[i]);
           let detail = '';
           if (error instanceof Error) {
             detail = `: ${error.message}`;
           } else if (typeof error === 'string') {
             detail = `: ${error}`;
           }
-          linhasComErro.push(`Linha ${i + 1}: "${linhas[i].substring(0, Math.min(linhas[i].length, 50))}..." - Erro${detail}`);
+          linhasComErro.push(`Line ${i + 1}: "${linhas[i].substring(0, Math.min(linhas[i].length, 50))}..." - Erro${detail}`);
           erros++;
         }
       }
 
-      let mensagemFinal = `Importação de Animes Concluída.\nImportadas: ${importadas}\nErros: ${erros}`;
+      let mensagemFinal = `${t('return.imported')}: ${importadas}\n${t('return.failed')}: ${erros}`;
       if (erros > 0) {
-        mensagemFinal += '\n\nDetalhes dos erros (primeiros 5):';
+        mensagemFinal += '\n\nError details (first 5):';
         linhasComErro.slice(0, 5).forEach(msg => mensagemFinal += `\n- ${msg}`);
         if (erros > 5) {
-          mensagemFinal += '\n... e mais erros. Verifique o console para detalhes completos.';
+          mensagemFinal += '\n... and more errors. Check the console for full details.';
         }
       }
 
       Alert.alert(
-        'Importação de Animes Concluída',
+        t('return.import_completed'),
         mensagemFinal,
         // Ao fechar o alerta, recarregar os dados para atualizar as estatísticas
         [{ text: 'OK', onPress: carregarDadosAnimes }]
       );
 
     } catch (error: unknown) {
-      console.error('Erro geral ao importar animes:', error);
-      let errorMessage = 'Não foi possível importar os animes. Verifique se o arquivo está no formato correto (separado por ponto e vírgula).';
+      console.error('Common error when importing anime:', error);
+      let errorMessage = t('return.error_import_format_anime');
       if (error instanceof Error) {
-        errorMessage += `\nDetalhes: ${error.message}`;
+        errorMessage += `\nDetails: ${error.message}`;
       }
-      Alert.alert('Erro', errorMessage);
+      Alert.alert(t('return.error'), errorMessage);
     } finally {
       setImportando(false);
     }
@@ -304,48 +308,48 @@ export default function Import() {
       const dadosTeste: Omit<Anime, 'id'>[] = [
         {
           nome: "Attack on Titan",
-          status: "já assistido",
-          release_day: "domingo",
+          status: "completed",
+          release_day: "sunday",
           observacao: "Anime incrível, reviravoltas chocantes.",
           link: "https://myanimelist.net/anime/16498/Shingeki_no_Kyojin",
           seasons: "[25,12,10,16,12]"
         },
         {
           nome: "Jujutsu Kaisen",
-          status: "assistindo",
-          release_day: "quinta",
+          status: "watching",
+          release_day: "thursday",
           observacao: "Animação fantástica e lutas intensas.",
           link: "https://myanimelist.net/anime/40748/Jujutsu_Kaisen",
           seasons: "[24,23]"
         },
         {
           nome: "Spy x Family",
-          status: "assistindo",
-          release_day: "sábado",
+          status: "watching",
+          release_day: "saturday",
           observacao: "Muito divertido e com personagens carismáticos.",
           link: "https://myanimelist.net/anime/50265/Spy_x_Family",
           seasons: "[25,13]"
         },
         {
           nome: "Frieren: Beyond Journey's End",
-          status: "assistindo",
-          release_day: "sexta",
+          status: "plan_to_watch", // Alterado para teste
+          release_day: "friday",
           observacao: "Uma jornada emocionante e reflexiva. Linda animação.",
           link: "https://myanimelist.net/anime/52991/Sousou_no_Frieren",
           seasons: "[28]"
         },
         {
           nome: "Solo Leveling",
-          status: "assistindo",
-          release_day: "sábado",
+          status: "plan_to_watch", // Alterado para teste
+          release_day: "saturday",
           observacao: "Adaptação do webtoon, muito hype!",
           link: "https://myanimelist.net/anime/55026/Solo_Leveling",
           seasons: "[12]"
         },
         {
           nome: "Chainsaw Man",
-          status: "já assistido",
-          release_day: "terça",
+          status: "completed",
+          release_day: "tuesday",
           observacao: "Violento e único, estilo de arte marcante.",
           link: "https://myanimelist.net/anime/49378/Chainsaw_Man",
           seasons: "[12]"
@@ -367,14 +371,14 @@ export default function Import() {
       }
 
       Alert.alert(
-        'Importação de Dados de Teste de Animes Concluída',
-        `Importadas: ${importadas}\nErros: ${erros}`,
+        t('return.import_test'),
+        `${t('return.imported')}: ${importadas}\n${t('return.failed')}: ${erros}`,
         // Ao fechar o alerta, recarregar os dados para atualizar as estatísticas
         [{ text: 'OK', onPress: carregarDadosAnimes }]
       );
     } catch (error: unknown) {
-      console.error('Erro ao importar dados de teste de animes:', error);
-      let errorMessage = 'Não foi possível importar os dados de teste de animes.';
+      console.error('Error importing anime test data:', error);
+      let errorMessage = 'We were unable to import the anime test data.';
       if (error instanceof Error) {
         errorMessage += `\nDetalhes: ${error.message}`;
       }
@@ -386,12 +390,12 @@ export default function Import() {
 
   async function limparBancoDadosAnimes() {
     Alert.alert(
-      'Limpar Banco de Dados',
-      'Tem certeza que deseja limpar todo o banco de dados de animes? Esta ação não pode ser desfeita.',
+      t('return.clear_database'),
+      t('return.clear_anime_database_sure'),
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { text: t('button.cancel'), style: 'cancel' },
         {
-          text: 'Limpar',
+          text: t('button.clean'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -399,21 +403,21 @@ export default function Import() {
               const sucesso = await recriarTabelaAnimes();
               if (sucesso) {
                 Alert.alert(
-                  'Sucesso',
-                  'Banco de dados de animes limpo com sucesso',
+                  t('return.success'),
+                  t('return.cleaned_anime_database'),
                   // Recarregar dados após limpar o DB
                   [{ text: 'OK', onPress: carregarDadosAnimes }]
                 );
               } else {
-                Alert.alert('Erro', 'Não foi possível limpar o banco de dados de animes');
+                Alert.alert(t('return.error'), t('return.clear_error'));
               }
             } catch (error: unknown) {
-              console.error('Erro ao limpar banco de dados de animes:', error);
-              let errorMessage = 'Ocorreu um erro ao limpar o banco de dados de animes.';
+              console.error('Error clearing anime database:', error);
+              let errorMessage = t('return.clear_error');
               if (error instanceof Error) {
-                errorMessage += `\nDetalhes: ${error.message}`;
+                errorMessage += `\nDetails: ${error.message}`;
               }
-              Alert.alert('Erro', errorMessage);
+              Alert.alert(t('return.error'), errorMessage);
             } finally {
               setImportando(false);
             }
@@ -425,12 +429,10 @@ export default function Import() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Text style={[styles.title, { color: colors.text }]}>Ferramentas</Text>
-      <View style={[styles.separator, { backgroundColor: colors.borderColor }]} />
 
       <ButtonTT
         buttonStyle={{ marginVertical: 5 }}
-        title="Importar CSV"
+        title={t('button.import') + " CSV"}
         onPress={importarAnimes}
         disabled={importando}
         color={colors.info}
@@ -438,42 +440,44 @@ export default function Import() {
       <View style={styles.spacer} />
       <ButtonTT
         buttonStyle={{ marginVertical: 5 }}
-        title="Exportar CSV"
+        title={t('button.export') + " CSV"}
         onPress={exportarAnimes}
         disabled={exportando}
         color={colors.success}
       />
 
-      <Text style={[styles.subtitle, { color: colors.text }]}>Estatísticas dos Animes</Text>
       <View style={[styles.statsContainer, { backgroundColor: colors.inputBackground, borderColor: colors.borderColor }]}>
         {carregandoDados ? (
           <ActivityIndicator size="large" color={colors.tint} />
         ) : (
           <>
             <View style={[styles.statItem, { backgroundColor: colors.inputBackground }]}>
-              <Text style={[styles.statLabel, { color: colors.text }]}>Total de Animes:</Text>
+              <Text style={[styles.statLabel, { color: colors.text }]}>{t('stats.total_animes')}:</Text>
               <Text style={[styles.statValue, { color: colors.text }]}>{totalAnimes}</Text>
             </View>
             <View style={[styles.statItem, { backgroundColor: colors.inputBackground }]}>
-              <Text style={[styles.statLabel, { color: colors.text }]}>Assistindo:</Text>
-              <Text style={[styles.statValue, { color: colors.warning }]}>{animesAssistindo}</Text>
+              <Text style={[styles.statLabel, { color: colors.text }]}>{t('stats.watching')}:</Text>
+              <Text style={[styles.statValue, { color: colors.info }]}>{animes_watching}</Text>
             </View>
             <View style={[styles.statItem, { backgroundColor: colors.inputBackground }]}>
-              <Text style={[styles.statLabel, { color: colors.text }]}>Já Assistidos:</Text>
-              <Text style={[styles.statValue, { color: colors.success }]}>{animesJaAssistidos}</Text>
+              <Text style={[styles.statLabel, { color: colors.text }]}>{t('stats.completed')}:</Text>
+              <Text style={[styles.statValue, { color: colors.success }]}>{animes_completed}</Text>
             </View>
             <View style={[styles.statItem, { backgroundColor: colors.inputBackground }]}>
-              <Text style={[styles.statLabel, { color: colors.text }]}>Total de Horas Vistas (aprox.):</Text>
+              <Text style={[styles.statLabel, { color: colors.text }]}>{t('stats.plan_to_watch')}:</Text>
+              <Text style={[styles.statValue, { color: colors.warning2 }]}>{animes_plan_to_watch}</Text>
+            </View>
+            <View style={[styles.statItem, { backgroundColor: colors.inputBackground }]}>
+              <Text style={[styles.statLabel, { color: colors.text }]}>{t('stats.total_hours')}:</Text>
               <Text style={[styles.statValue, { color: colors.text }]}>{calcularTotalHoras()}</Text>
             </View>
           </>
         )}
       </View>
 
-      <View style={styles.bottomSpacer} />
       <ButtonTT
-        title="Importar Dados Teste"
-        displayButton={false}
+        title={t('button.import_test')}
+        displayButton={true}
         buttonStyle={{ marginVertical: 5 }}
         onLongPress={importarDadosTesteAnimes}
         disabled={importando}
@@ -482,7 +486,7 @@ export default function Import() {
       <View style={styles.spacer} />
       <ButtonTT
         buttonStyle={{ marginVertical: 5, marginBottom: 30 }}
-        title="Limpar Banco de Dados"
+        title={t('button.clear_database')}
         onLongPress={limparBancoDadosAnimes}
         disabled={importando}
         color={colors.error}
@@ -515,7 +519,8 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 12,
     borderWidth: 1,
-    marginBottom: 20,
+    marginBottom: 10,
+    marginTop: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,

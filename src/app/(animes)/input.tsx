@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Button,
@@ -25,8 +26,8 @@ import { ThemedToggle, ToggleOption } from '../../components/ThemedToggle';
 import DynamicSeasonInput from '../../components/Jhonatanrs/DynamicSeasonInput';
 import type { DynamicSeasonInputRef } from '../../components/Jhonatanrs/DynamicSeasonInput';
 
-type StatusAnime = 'assistindo' | 'já assistido';
-type ReleaseDay = 'segunda' | 'terça' | 'quarta' | 'quinta' | 'sexta' | 'sábado' | 'domingo';
+type StatusAnime = 'watching' | 'completed' | 'plan_to_watch';
+type ReleaseDay = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
 
 interface Anime {
   id: number;
@@ -39,14 +40,16 @@ interface Anime {
 }
 
 export default function AnimesInput() {
+  const { t } = useTranslation();
+
   const router = useRouter();
   const params = useLocalSearchParams();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
 
   const [nomeAnime, setNomeAnime] = useState('');
-  const [status, setStatus] = useState<StatusAnime>('assistindo');
-  const [releaseDay, setReleaseDay] = useState<ReleaseDay>('segunda');
+  const [status, setStatus] = useState<StatusAnime>('plan_to_watch');
+  const [releaseDay, setReleaseDay] = useState<ReleaseDay>('monday');
   const [observacao, setObservacao] = useState('');
   const [link, setLink] = useState('');
 
@@ -56,14 +59,25 @@ export default function AnimesInput() {
   const [animeSendoEditado, setAnimeSendoEditado] = useState<Anime | null>(null);
 
   const statusOptions: ToggleOption<StatusAnime>[] = [
-    { label: "Assistindo", value: "assistindo" },
-    { label: "Já Assistido", value: "já assistido" },
+    { label: t('status.watching'), value: "watching" },
+    { label: t('status.completed'), value: "completed" },
+    { label: t('status.plan_to_watch'), value: "plan_to_watch" },
+  ];
+
+  const releaseOptions: ToggleOption<ReleaseDay>[] = [
+    { label: t('release.sunday_ab'), value: 'sunday' },
+    { label: t('release.monday_ab'), value: 'monday' },
+    { label: t('release.tuesday_ab'), value: 'tuesday' },
+    { label: t('release.wednesday_ab'), value: 'wednesday' },
+    { label: t('release.thursday_ab'), value: 'thursday' },
+    { label: t('release.friday_ab'), value: 'friday' },
+    { label: t('release.saturday_ab'), value: 'saturday' }
   ];
 
   const limparCampos = useCallback(() => {
     setNomeAnime('');
-    setStatus('assistindo');
-    setReleaseDay('segunda');
+    setStatus('plan_to_watch');
+    setReleaseDay('monday');
     setObservacao('');
     setLink('');
     if (dynamicInputRef.current) {
@@ -96,19 +110,19 @@ export default function AnimesInput() {
                   setDynamicSeasonsData([]);
                 }
               } catch (e) {
-                console.error("Erro ao fazer parse de seasons:", e);
+                console.error("Error when analyzing seasons:", e);
                 setDynamicSeasonsData([]);
               }
             } else {
               setDynamicSeasonsData([]);
             }
           } else {
-            Alert.alert('Erro', 'Anime não encontrado para edição.');
+            Alert.alert(t('return.error'), t('return.error_edit_anime'));
             limparCampos();
           }
         } catch (error) {
-          console.error('Erro ao carregar anime para edição:', error);
-          Alert.alert('Erro', 'Não foi possível carregar o anime para edição.');
+          console.error('Error loading anime for editing:', error);
+          Alert.alert(t('return.error'), t('return.error_load_anime'));
           limparCampos();
         }
       };
@@ -120,7 +134,7 @@ export default function AnimesInput() {
 
   async function salvarOuAtualizarAnime() {
     if (!nomeAnime || !status) {
-      Alert.alert('Erro', 'Nome do anime e status são obrigatórios.');
+      Alert.alert(t('return.warning'), t('return.warning_name_status_anime'));
       return;
     }
 
@@ -140,17 +154,17 @@ export default function AnimesInput() {
 
       if (animeSendoEditado) {
         await atualizarAnime({ ...dadosAnime, id: animeSendoEditado.id } as Anime);
-        Alert.alert('Sucesso', 'Anime atualizado com sucesso!');
+        Alert.alert(t('return.success'), t('return.anime_update'));
       } else {
         await salvarAnime(dadosAnime);
-        Alert.alert('Sucesso', 'Anime salvo com sucesso!');
+        Alert.alert(t('return.success'), t('return.anime_save'));
       }
 
       limparCampos();
       router.replace('/input');
     } catch (error) {
-      console.error('Erro ao salvar/atualizar anime:', error);
-      Alert.alert('Erro', 'Não foi possível salvar/atualizar o anime');
+      console.error('Error saving/updating anime:', error);
+      Alert.alert(t('return.error'), t('return.error_save_edit'));
     }
   }
 
@@ -159,13 +173,13 @@ export default function AnimesInput() {
       const clipboardContent = await Clipboard.getStringAsync();
       if (clipboardContent) {
         setLink(clipboardContent);
-        Alert.alert('Sucesso', 'Link colado da área de transferência!');
+        Alert.alert(t('return.success'), t('return.paste_from_cb'));
       } else {
-        Alert.alert('Aviso', 'A área de transferência está vazia.');
+        Alert.alert(t('return.warning'), t('return.cb_empty'));
       }
     } catch (error) {
-      console.error('Erro ao colar do clipboard:', error);
-      Alert.alert('Erro', 'Não foi possível colar o link.');
+      console.error('Error pasting from clipboard:', error);
+      Alert.alert(t('return.error'), t('return.error_paste_link'));
     }
   };
 
@@ -198,10 +212,6 @@ export default function AnimesInput() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 10} // Este pode ser ajustado para um valor, ex: Header height
     >
-      <Text style={[styles.title, { color: colors.text }]}>
-        {animeSendoEditado ? `Editar Anime (${animeSendoEditado.id})` : 'Novo Anime'}
-      </Text>
-      <View style={[styles.separator, { backgroundColor: colors.borderColor }]} />
 
       <ScrollView
         style={styles.formContainer}
@@ -212,17 +222,17 @@ export default function AnimesInput() {
         scrollEnabled={!isKeyboardVisible}
       >
         <View style={styles.inputContainer}>
-          <Text style={[styles.label, { color: colors.text }]}>Nome do Anime</Text>
+          <Text style={[styles.label, { color: colors.text }]}>{t('input_anime.name')}</Text>
           <ThemedInput
             value={nomeAnime}
             onChangeText={setNomeAnime}
-            placeholder="Ex: One Piece"
+            placeholder={t('placeholder.name')}
             placeholderTextColor={colors.text}
           />
         </View>
 
         <View style={styles.inputContainer}>
-          <Text style={[styles.label, { color: colors.text }]}>Status</Text>
+          <Text style={[styles.label, { color: colors.text }]}>{t('input_anime.status')}</Text>
           <ThemedToggle<StatusAnime>
             options={statusOptions}
             selectedValue={status}
@@ -231,28 +241,20 @@ export default function AnimesInput() {
         </View>
 
         <View style={styles.inputContainer}>
-          <Text style={[styles.label, { color: colors.text }]}>Dia de Lançamento</Text>
-          <ThemedPicker
-            style={{ color: colors.text }} // Use colors.text para consistência
+          <Text style={[styles.label, { color: colors.text }]}>{t('input_anime.release_day')}</Text>
+          <ThemedToggle<ReleaseDay>
+            options={releaseOptions}
             selectedValue={releaseDay}
-            onValueChange={(itemValue) => setReleaseDay(itemValue as ReleaseDay)}
-          >
-            <ThemedPicker.Item label="Segunda" value="segunda" />
-            <ThemedPicker.Item label="Terça" value="terça" />
-            <ThemedPicker.Item label="Quarta" value="quarta" />
-            <ThemedPicker.Item label="Quinta" value="quinta" />
-            <ThemedPicker.Item label="Sexta" value="sexta" />
-            <ThemedPicker.Item label="Sábado" value="sábado" />
-            <ThemedPicker.Item label="Domingo" value="domingo" />
-          </ThemedPicker>
+            onValueChange={setReleaseDay}
+          />
         </View>
 
         <View style={styles.inputContainer}>
-          <Text style={[styles.label, { color: colors.text }]}>Observação</Text>
+          <Text style={[styles.label, { color: colors.text }]}>{t('input_anime.obs')}</Text>
           <ThemedInput
             value={observacao}
             onChangeText={setObservacao}
-            placeholder="Notas sobre o anime..."
+            placeholder={t('placeholder.about')}
             placeholderTextColor={colors.text}
             multiline
             numberOfLines={1}
@@ -261,12 +263,12 @@ export default function AnimesInput() {
         </View>
 
         <View style={styles.inputContainer}>
-          <Text style={[styles.label, { color: colors.text }]}>Link</Text>
+          <Text style={[styles.label, { color: colors.text }]}>{t('input_anime.link')}</Text>
           <View style={styles.linkInputContainer}>
             <ThemedInput
               value={link}
               onChangeText={setLink}
-              placeholder="Cole o link aqui (ex: crunchyroll.com/anime)"
+              placeholder={t('placeholder.link')}
               placeholderTextColor={colors.text}
               style={styles.linkTextInput}
             />
@@ -283,6 +285,7 @@ export default function AnimesInput() {
         <View style={styles.inputContainer}>
           <DynamicSeasonInput
             ref={dynamicInputRef}
+            labelPrefix={t('input_anime.season')}
             onChange={setDynamicSeasonsData}
             style={{
               backgroundColor: colors.background,
@@ -304,7 +307,7 @@ export default function AnimesInput() {
       <View style={styles.buttonContainer}>
         {params.id && (
           <ButtonTT
-            title="Cancelar Edição"
+            title={t('button.cancel_edit')}
             onPress={() => {
               limparCampos();
               router.replace('/input');
@@ -314,12 +317,12 @@ export default function AnimesInput() {
         )}
 
         <ButtonTT
-          title={"Limpar"}
+          title={t('button.clean')}
           onPress={() => limparCampos()}
           color={colors.info}
         />
         <ButtonTT
-          title={params.id ? "Salvar Alterações" : "Salvar"}
+          title={params.id ? t('button.save_edit') : t('button.save')}
           onPress={salvarOuAtualizarAnime}
           color={colors.success}
         />

@@ -1,8 +1,9 @@
+import { useTranslation } from 'react-i18next';
 import { useState, useEffect, useCallback } from 'react';
 import { Button, Alert, StyleSheet, ScrollView, Platform } from 'react-native';
 import { Text, View } from '../../components/Themed';
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system'; // Corrected import
+import * as FileSystem from 'expo-file-system/legacy'; // Corrected import
 import * as Sharing from 'expo-sharing';
 import * as Print from 'expo-print';
 import ButtonTT from '../../components/Jhonatanrs/ButtonTT';
@@ -49,6 +50,7 @@ interface CaixaResumo {
 }
 
 export default function Import() {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const [importando, setImportando] = useState(false);
@@ -97,8 +99,8 @@ export default function Import() {
       });
       setValorAtual((totalEntradasGeral - totalSaidasGeral) / 100);
     } catch (error) {
-      console.error('Erro ao calcular valor atual total:', error);
-      Alert.alert('Erro', 'Não foi possível calcular o valor atual.');
+      console.error('Error calculating total present value:', error);
+      Alert.alert(t('return.error'), t('return.error_calc_value'));
     }
   }, []);
 
@@ -211,8 +213,8 @@ export default function Import() {
       });
       setResumoPorCaixa(resumoCaixas);
     } catch (error) {
-      console.error('Erro ao calcular resumo:', error);
-      Alert.alert('Erro', 'Não foi possível calcular o resumo dos dados.');
+      console.error('Error calculating summary:', error);
+      Alert.alert(t('return.error'), t('return.error_calc_resume'));
     } finally {
       setCarregandoResumo(false);
     }
@@ -231,9 +233,9 @@ export default function Import() {
       setExportando(true);
       const transacoes = await buscarTransacoes() as Transacao[];
 
-      transacoes.sort((a, b) => a.id - b.id); 
+      transacoes.sort((a, b) => a.id - b.id);
 
-      const cabecalho = 'Descrição;Caixa;Categoria;Quantidade;Valor;Tipo;Ação;Data\n';
+      const cabecalho = 'Description;Wallet;Category;Quantity;Value;Type;Action;Date\n';
 
       const linhas = transacoes.map(t => {
         const escapeAndQuote = (text: string | number | null) => {
@@ -259,25 +261,25 @@ export default function Import() {
 
       const isAvailable = await Sharing.isAvailableAsync();
       if (!isAvailable) {
-        Alert.alert('Erro', 'O compartilhamento de arquivos não está disponível nesta plataforma.');
+        Alert.alert(t('return.error'), t('return.error_share'));
         return;
       }
 
       await Sharing.shareAsync(fileUri, {
         UTI: 'public.plain-text',
         mimeType: 'text/plain',
-        dialogTitle: 'Salvar Transações',
+        dialogTitle: 'Save Transactions',
       });
 
-      Alert.alert('Sucesso', 'Arquivo de transações gerado e pronto para ser salvo!');
+      Alert.alert(t('return.success'), t('return.success_export_finance'));
 
     } catch (error: unknown) {
-      console.error('Erro ao exportar transações:', error);
-      let errorMessage = 'Não foi possível exportar as transações.';
+      console.error('Error exporting transactions:', error);
+      let errorMessage = t('return.error_export_finance');
       if (error instanceof Error) {
-        errorMessage = `Não foi possível exportar as transações: ${error.message}`;
+        errorMessage = `The transactions could not be exported. ${error.message}`;
       }
-      Alert.alert('Erro', errorMessage);
+      Alert.alert(t('return.error'), errorMessage);
     } finally {
       setExportando(false);
     }
@@ -302,18 +304,18 @@ export default function Import() {
       const linhas = conteudo.split('\n');
 
       if (linhas.length === 0) {
-        Alert.alert('Erro', 'O arquivo está vazio.');
+        Alert.alert(t('return.error'), t('return.import_empty'));
         return;
       }
 
       const cabecalhoLinha = linhas[0].trim();
       const cabecalho = cabecalhoLinha.split(';').map(h => h.trim());
 
-      const camposEssenciais = ['Descrição', 'Caixa', 'Categoria', 'Quantidade', 'Valor', 'Tipo', 'Ação', 'Data'];
+      const camposEssenciais = ['Description', 'Wallet', 'Category', 'Quantity', 'Value', 'Type', 'Action', 'Date'];
       const camposMinimosValidos = camposEssenciais.every(campo => cabecalho.includes(campo));
 
       if (!camposMinimosValidos) {
-        Alert.alert('Erro', 'Formato de arquivo inválido. Verifique se o arquivo tem os campos essenciais: Descrição, Caixa, Categoria, Quantidade, Valor, Tipo, Ação, Data.');
+        Alert.alert(t('return.error'), t('return.error_import_format_finance'));
         return;
       }
 
@@ -360,8 +362,8 @@ export default function Import() {
         const todosIndicesValidos = indices.every(index => index !== -1 && index < valores.length);
 
         if (!todosIndicesValidos) {
-          console.log('Linha ignorada - campos essenciais faltando ou número incorreto de colunas:', linhas[i]);
-          linhasComErro.push(`Linha ${i + 1}: "${linhas[i].substring(0, Math.min(linhas[i].length, 50))}..." - Campos essenciais faltando ou número incorreto de colunas.`);
+          console.log('Line skipped - essential fields missing or incorrect number of columns:', linhas[i]);
+          linhasComErro.push(`Line ${i + 1}: "${linhas[i].substring(0, Math.min(linhas[i].length, 50))}..." - Campos essenciais faltando ou número incorreto de colunas.`);
           erros++;
           continue;
         }
@@ -370,7 +372,7 @@ export default function Import() {
           const rawTipoTransacao = valores[cabecalho.indexOf('Tipo')];
           const tipoTransacaoValues: TipoTransacao[] = ['PIX', 'Dinheiro', 'Boleto', 'Débito', 'Crédito', 'TED', 'DOC', 'Distinto'];
           if (!tipoTransacaoValues.includes(rawTipoTransacao as TipoTransacao)) {
-            throw new Error(`Tipo de transação inválido: "${rawTipoTransacao}"`);
+            throw new Error(`Invalid transaction type: "${rawTipoTransacao}"`);
           }
           const tipo_transacao: TipoTransacao = rawTipoTransacao as TipoTransacao;
 
@@ -381,22 +383,22 @@ export default function Import() {
           } else if (rawAcao === 'saida' || rawAcao === 'gasto') {
             acao = 'saida';
           } else {
-            throw new Error(`Ação inválida: "${rawAcao}"`);
+            throw new Error(`Invalid action: "${rawAcao}"`);
           }
 
-          let dataBruta = valores[cabecalho.indexOf('Data')];
+          let dataBruta = valores[cabecalho.indexOf('Date')];
           if (dataBruta.includes('-')) {
             dataBruta = dataBruta.replace(/-/g, '/');
           }
           const data = formatarData(dataBruta);
 
-          const valorParsed = parseFloat(valores[cabecalho.indexOf('Valor')]);
+          const valorParsed = parseFloat(valores[cabecalho.indexOf('Value')]);
 
           const transacao: Omit<Transacao, 'id'> = {
-            descricao: valores[cabecalho.indexOf('Descrição')],
-            caixa: valores[cabecalho.indexOf('Caixa')],
-            categoria: valores[cabecalho.indexOf('Categoria')],
-            quantidade: parseInt(valores[cabecalho.indexOf('Quantidade')]),
+            descricao: valores[cabecalho.indexOf('Description')],
+            caixa: valores[cabecalho.indexOf('Wallet')],
+            categoria: valores[cabecalho.indexOf('Category')],
+            quantidade: parseInt(valores[cabecalho.indexOf('Quantity')]),
             valor: valorParsed,
             tipo_transacao: tipo_transacao,
             acao: acao,
@@ -404,37 +406,37 @@ export default function Import() {
           };
 
           if (isNaN(transacao.quantidade) || isNaN(transacao.valor)) {
-            throw new Error('Quantidade ou Valor não são números válidos.');
+            throw new Error('Quantity or Value are not valid numbers.');
           }
 
           await salvarTransacao(transacao);
           importadas++;
         } catch (error: unknown) {
-          console.error('Erro ao importar transação:', error, 'Linha:', linhas[i]);
+          console.error('Error importing transaction:', error, 'Line:', linhas[i]);
           let detail = '';
           if (error instanceof Error) {
             detail = `: ${error.message}`;
           } else if (typeof error === 'string') {
             detail = `: ${error}`;
           }
-          linhasComErro.push(`Linha ${i + 1}: "${linhas[i].substring(0, Math.min(linhas[i].length, 50))}..." - Erro${detail}`);
+          linhasComErro.push(`Line ${i + 1}: "${linhas[i].substring(0, Math.min(linhas[i].length, 50))}..." - Erro${detail}`);
           erros++;
         }
       }
 
       Alert.alert(
-        'Importação Concluída',
-        `Importadas: ${importadas}\nErros: ${erros}`
+        t('return.import_completed'),
+        `${t('return.imported')}: ${importadas}\n${t('return.failed')}: ${erros}`
       );
       calcularResumoDados(); // Recalculate filtered summary
       calcularValorAtualTotal(); // Recalculate total value
     } catch (error: unknown) {
-      console.error('Erro geral ao importar:', error);
-      let errorMessage = 'Não foi possível importar as transações. Verifique se o arquivo está no formato correto.';
+      console.error('General error when importing:', error);
+      let errorMessage = t('return.error_import_format');
       if (error instanceof Error) {
-        errorMessage += `\nDetalhes: ${error.message}`;
+        errorMessage += `\nDetails: ${error.message}`;
       }
-      Alert.alert('Erro', errorMessage);
+      Alert.alert(t('return.error'), errorMessage);
     } finally {
       setImportando(false);
     }
@@ -464,30 +466,30 @@ export default function Import() {
           await salvarTransacao(transacao as Omit<Transacao, 'id'>);
           importadas++;
         } catch (error: unknown) {
-          console.error('Erro ao importar transação de teste:', error);
-          let errorMessage = 'Erro ao importar transação de teste.';
+          console.error('Error importing test transaction:', error);
+          let errorMessage = t('return.error_import_format');
           if (error instanceof Error) {
-            errorMessage += `\nDetalhes: ${error.message}`;
+            errorMessage += `\nDetails: ${error.message}`;
           } else if (typeof error === 'string') {
-            errorMessage += `\nDetalhes: ${error}`;
+            errorMessage += `\nDetails: ${error}`;
           }
           erros++;
         }
       }
 
       Alert.alert(
-        'Importação de Teste Concluída',
-        `Importadas: ${importadas}\nErros: ${erros}`
+        t('return.import_test'),
+        `${t('return.imported')}: ${importadas}\n${t('return.failed')}: ${erros}`
       );
       calcularResumoDados(); // Recalculate filtered summary
       calcularValorAtualTotal(); // Recalculate total value
     } catch (error: unknown) {
-      console.error('Erro geral ao importar dados de teste:', error);
-      let errorMessage = 'Não foi possível importar os dados de teste.';
+      console.error('General error when importing test data:', error);
+      let errorMessage = t('return.error_import_format');
       if (error instanceof Error) {
-        errorMessage += `\nDetalhes: ${error.message}`;
+        errorMessage += `\nDetails: ${error.message}`;
       }
-      Alert.alert('Erro', errorMessage);
+      Alert.alert(t('return.error'), errorMessage);
     } finally {
       setImportando(false);
     }
@@ -496,31 +498,31 @@ export default function Import() {
   // --- Limpar Banco de Dados ---
   async function limparBancoDados() {
     Alert.alert(
-      'Limpar Banco de Dados',
-      'Tem certeza que deseja limpar todo o banco de dados? Esta ação não pode ser desfeita.',
+      t('return.clear_database'),
+      t('return.clear_anime_database_sure'),
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { text: t('button.cancel'), style: 'cancel' },
         {
-          text: 'Limpar',
+          text: t('button.clean'),
           style: 'destructive',
           onPress: async () => {
             try {
               setImportando(true);
               const sucesso = await recriarTabela();
               if (sucesso) {
-                Alert.alert('Sucesso', 'Banco de dados limpo com sucesso');
+                Alert.alert(t('return.success'), t('return.cleaned_finance_database'));
               } else {
-                Alert.alert('Erro', 'Não foi possível limpar o banco de dados');
+                Alert.alert(t('return.error'), t('return.clear_error'));
               }
               calcularResumoDados(); // Recalculate filtered summary
               calcularValorAtualTotal(); // Recalculate total value
             } catch (error: unknown) {
-              console.error('Erro ao limpar banco de dados:', error);
-              let errorMessage = 'Ocorreu um erro ao limpar o banco de dados.';
+              console.error('Error clearing database:', error);
+              let errorMessage = t('return.clear_error');
               if (error instanceof Error) {
-                errorMessage += `\nDetalhes: ${error.message}`;
+                errorMessage += `\nDetails: ${error.message}`;
               }
-              Alert.alert('Erro', errorMessage);
+              Alert.alert(t('return.error'), errorMessage);
             } finally {
               setImportando(false);
             }
@@ -622,7 +624,7 @@ export default function Import() {
       <html>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
-        <title>Relatório</title>
+        <title>${t('return.Report')}</title>
         <style>
           body { font-family: Arial, sans-serif; margin: 20px; }
           h1, h2, h3 { color: #333; text-align: center; margin-bottom: 10px; }
@@ -652,8 +654,8 @@ export default function Import() {
         </style>
       </head>
       <body>
-        <h1>Relatório Detalhado</h1>
-        <p style="text-align: center;">Gerado em: ${dataGeracao}</p>
+        <h1>${t('return.detailed_report')}</h1>
+        <p style="text-align: center;">${t('return.generated_in')}: ${dataGeracao}</p>
     `;
 
     // Add filter period to report title if present
@@ -665,8 +667,8 @@ export default function Import() {
 
 
     const mesesNomes = [
-      "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-      "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+      t('months.january'), t('months.february'), t('months.march'), t('months.april'), t('months.may'), t('months.june'),
+      t('months.july'), t('months.august'), t('months.september'), t('months.october'), t('months.november'), t('months.december')
     ];
 
     const anosOrdenados = Object.keys(resumoMensal).sort();
@@ -677,7 +679,7 @@ export default function Import() {
       anosOrdenados.forEach(ano => {
         htmlContent += `
           <div class="section">
-            <h2>Ano: ${ano}</h2>
+            <h2>${t('year')}: ${ano}</h2>
         `;
 
         const mesesDoAnoOrdenados = Object.keys(resumoMensal[ano]).sort((a, b) => {
@@ -700,20 +702,20 @@ export default function Import() {
 
           htmlContent += `
             <div class="subsection">
-              <h3>Mês: ${nomeMes}/${anoStrMes}</h3>
-              <p style="font-weight: bold;">Total Entradas do Mês: <span class="entry">${entradasMesReais}</span></p>
-              <p style="font-weight: bold;">Total Saídas do Mês: <span class="exit">${saidasMesReais}</span></p>
-              <p style="font-weight: bold;">Saldo do Mês: <span class="balance">${saldoMesReais}</span></p>
+              <h3>${t('month')}: ${nomeMes}/${anoStrMes}</h3>
+              <p style="font-weight: bold;">${t('return.generated_income_month')}: <span class="entry">${entradasMesReais}</span></p>
+              <p style="font-weight: bold;">${t('return.generated_expense_month')}: <span class="exit">${saidasMesReais}</span></p>
+              <p style="font-weight: bold;">${t('return.generated_balance_month')}: <span class="balance">${saldoMesReais}</span></p>
 
-              <h4>Detalhes por Caixa e Categoria</h4>
+              <h4>${t('return.generated_title')}</h4>
               <table>
                 <thead>
                   <tr>
-                    <th>Caixa</th>
-                    <th>Categoria</th>
-                    <th>Entradas</th>
-                    <th>Saídas</th>
-                    <th>Saldo</th>
+                    <th>${t('input_finance.wallet')}</th>
+                    <th>${t('input_finance.category')}</th>
+                    <th>${t('action.inflow')}</th>
+                    <th>${t('action.outflow')}</th>
+                    <th>${t('input_finance.value')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -769,7 +771,7 @@ export default function Import() {
 
     htmlContent += `
         <div class="footer">
-          <p>Relatório gerado pelo aplicativo JRSAPP.</p>
+          <p>${t('return.generated_by')}</p>
           <p>By Jhonatanrs</p>
         </div>
       </body>
@@ -810,37 +812,27 @@ export default function Import() {
 
   return (
     <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={[styles.container, { backgroundColor: colors.background }]}>
-      <Text style={[styles.title, { color: colors.text }]}>Ferramentas</Text>
-      <View style={[styles.separator, { backgroundColor: colors.borderColor }]} />
 
       <ButtonTT
         buttonStyle={{ marginVertical: 5 }}
-        title="Importar CSV"
+        title={t('button.import')+" CSV"}
         onPress={importarTransacoes}
         disabled={importando}
         color={colors.info}
       />
       <ButtonTT
         buttonStyle={{ marginVertical: 5 }}
-        title="Exportar CSV"
+        title={t('button.export')+" CSV"}
         onPress={exportarTransacoes}
         disabled={importando}
         color={colors.success}
       />
 
-
-
-
-
-      <View style={[styles.separator, { backgroundColor: colors.borderColor }]} />
-      <Text style={[styles.subtitle, { color: colors.text }]}>Filtro por Período</Text>
-      <View style={[styles.separator, { backgroundColor: colors.borderColor }]} />
-
       <View style={styles.dateFilterContainer}>
         <View style={styles.datePickerRow}>
-          <Text style={[styles.dateLabel, { color: colors.text }]}>De:</Text>
+          <Text style={[styles.dateLabel, { color: colors.text }]}>{t('return.from')}:</Text>
           <ButtonTT
-            title={startDate ? formatarData(startDate) : "Selecionar Data Inicial"}
+            title={startDate ? formatarData(startDate) : t('return.date_start')}
             onPress={() => setShowDatePickerStart(true)}
             color={colors.primary}
             buttonStyle={styles.datePickerButton}
@@ -859,9 +851,9 @@ export default function Import() {
         )}
 
         <View style={styles.datePickerRow}>
-          <Text style={[styles.dateLabel, { color: colors.text }]}>Até:</Text>
+          <Text style={[styles.dateLabel, { color: colors.text }]}>{t('return.to')}:</Text>
           <ButtonTT
-            title={endDate ? formatarData(endDate) : "Selecionar Data Final"}
+            title={endDate ? formatarData(endDate) : t('return.date_end')}
             onPress={() => setShowDatePickerEnd(true)}
             color={colors.primary}
             buttonStyle={styles.datePickerButton}
@@ -880,21 +872,21 @@ export default function Import() {
         )}
         <ButtonTT
           buttonStyle={{ marginVertical: 10 }}
-          title="Aplicar Filtro"
+          title={t('button.apply')}
           onPress={calcularResumoDados} // Recalculate summary with new dates
           disabled={carregandoResumo}
           color={colors.info}
         />
         <ButtonTT
           buttonStyle={{ marginVertical: 5 }}
-          title="Limpar Filtro"
+          title={t('button.clean')}
           onPress={limparFiltro}
           color={colors.warning}
         />
 
         <ButtonTT
           buttonStyle={{ marginVertical: 5 }}
-          title="Gerar Relatório PDF"
+          title={t('button.generated_pdf')}
           onPress={gerarRelatorioPdf}
           disabled={exportando}
           color={'#007bff'}
@@ -903,7 +895,7 @@ export default function Import() {
 
       <View style={styles.resumoGeralContainer}>
         <Text style={[styles.resumoGeralLabel, { color: colors.text }]}>
-          Valor Atual (Total):
+          {t('return.current_value_total')}:
         </Text>
         <Text
           style={[
@@ -925,16 +917,16 @@ export default function Import() {
               .map(([caixa, dadosCaixa]) => (
                 <View key={caixa} style={styles.resumoCaixaContainer}>
                   <Text style={[styles.resumoCaixaTitulo, { color: colors.text }]}>
-                    Caixa: {caixa}
+                    {t('input_finance.wallet')}: {caixa}
                   </Text>
                   <Text style={[styles.resumoValorGeral, { color: colors.text }]}>
-                    Total Geral Entradas no Caixa: {(dadosCaixa.totalEntradasCaixa / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    {t('return.total_cash_inflow')}:  {(dadosCaixa.totalEntradasCaixa / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                   </Text>
                   <Text style={[styles.resumoValorGeral, { color: colors.text }]}>
-                    Total Geral Saídas no Caixa: {(dadosCaixa.totalSaidasCaixa / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    {t('return.total_cash_outflow')}:  {(dadosCaixa.totalSaidasCaixa / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                   </Text>
                   <Text style={[styles.resumoValorGeral, { color: colors.text }]}>
-                    Saldo Geral do Caixa: {((dadosCaixa.totalEntradasCaixa - dadosCaixa.totalSaidasCaixa) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    {t('return.total_cash_balance')}:  {((dadosCaixa.totalEntradasCaixa - dadosCaixa.totalSaidasCaixa) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                   </Text>
 
 
@@ -955,16 +947,16 @@ export default function Import() {
                           return (
                             <View key={`${caixa}-${mesAnoChave}`} style={styles.resumoMesContainer}>
                               <Text style={[styles.resumoMesTitulo, { color: colors.text }]}>
-                                Mês: {nomeMes}/{anoStr}
+                                {t('month')}: {nomeMes}/{anoStr}
                               </Text>
                               <Text style={[styles.resumoValorMes, { color: colors.text }]}>
-                                Total Entradas no Mês: {(dadosMes.totalEntradasMes / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                {t('return.generated_income_month')}: {(dadosMes.totalEntradasMes / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                               </Text>
                               <Text style={[styles.resumoValorMes, { color: colors.text }]}>
-                                Total Saídas no Mês: {(dadosMes.totalSaidasMes / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                {t('return.generated_expense_month')}: {(dadosMes.totalSaidasMes / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                               </Text>
                               <Text style={[styles.resumoValorMes, { color: colors.text }]}>
-                                Saldo no Mês: {((dadosMes.totalEntradasMes - dadosMes.totalSaidasMes) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                {t('return.generated_balance_month')}: {((dadosMes.totalEntradasMes - dadosMes.totalSaidasMes) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                               </Text>
 
                               <View style={[styles.linhaDivisoriaInterna, { backgroundColor: colors.borderColor }]} />
@@ -978,13 +970,13 @@ export default function Import() {
                                       - {categoria}:
                                     </Text>
                                     <Text style={[styles.resumoValor, { color: colors.text }]}>
-                                      Total Entradas: {(dadosCategoria.totalEntradasCategoria / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                      {t('return.generated_income')}: {(dadosCategoria.totalEntradasCategoria / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                                     </Text>
                                     <Text style={[styles.resumoValor, { color: colors.text }]}>
-                                      Total Saídas: {(dadosCategoria.totalSaidasCategoria / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                      {t('return.generated_expense')}: {(dadosCategoria.totalSaidasCategoria / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                                     </Text>
                                     <Text style={[styles.resumoValor, { color: colors.text }]}>
-                                      Saldo: {((dadosCategoria.totalEntradasCategoria - dadosCategoria.totalSaidasCategoria) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                      {t('return.generated_balance')}: {((dadosCategoria.totalEntradasCategoria - dadosCategoria.totalSaidasCategoria) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                                     </Text>
                                   </View>
                                 ))}
@@ -997,7 +989,7 @@ export default function Import() {
                 </View>
               ))
           ) : (
-            <Text style={{ color: colors.text }}>Nenhum dado para resumir por caixa no período selecionado.</Text>
+            <Text style={{ color: colors.text }}>{t('return.generated_resume')}</Text>
           )}
         </>
       )}
@@ -1005,15 +997,15 @@ export default function Import() {
       <View style={styles.bottomSpacer} />
       <ButtonTT
         buttonStyle={{ marginVertical: 5 }}
-        displayButton={false} // You might want to enable this for testing
-        title="Importar Dados de Teste"
+        displayButton={true} // You might want to enable this for testing
+        title={t('button.import_test')}
         onPress={importarDadosTeste}
         disabled={importando}
         color={colors.info}
       />
       <ButtonTT
         buttonStyle={{ marginVertical: 5, marginBottom: 30 }}
-        title="Limpar Banco de Dados"
+        title={t('button.clear_database')}
         onLongPress={limparBancoDados}
         disabled={importando}
         color={colors.error}

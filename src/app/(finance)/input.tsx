@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState, useEffect, useCallback } from 'react';
 import ButtonTT from '../../components/Jhonatanrs/ButtonTT';
 import AntDesign from '@expo/vector-icons/AntDesign';
@@ -21,6 +22,7 @@ import { formatarMoeda, formatarInput, formatarData, validarData, converterParaC
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import Colors from '../../constants/Colors';
 import { useColorScheme } from '../../components/useColorScheme';
+import { ThemedToggle, ToggleOption } from '../../components/ThemedToggle';
 import { useFocusEffect } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { QuantityInput } from '@/src/components/QuantityInput';
@@ -41,6 +43,7 @@ interface Transacao {
 }
 
 export default function Input() {
+  const { t } = useTranslation();
   const params = useLocalSearchParams();
   const router = useRouter();
   const colorScheme = useColorScheme() ?? 'light';
@@ -62,6 +65,17 @@ export default function Input() {
   const [mostrarCaixaSugestao, setMostrarCaixaSugestao] = useState(false); // Renomeado para clareza
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDateObject, setSelectedDateObject] = useState<Date>(new Date());
+
+  const acaoOptions: ToggleOption<Acao>[] = [
+    { label: t('action.inflow'), value: 'entrada' },
+    { label: t('action.outflow'), value: 'saida' },
+  ];
+
+  // LÓGICA FORA DO COMPONENTE:
+  const getStatusColor = () => {
+    if (acao === 'entrada') return colors.success;      // Azul
+    if (acao === 'saida') return colors.warning2;  // Verde
+  };
 
   // NOVOS ESTADOS PARA MODAIS
   const [showCaixaModal, setShowCaixaModal] = useState(false);
@@ -91,7 +105,7 @@ export default function Input() {
     const calculatedValue = numericValue - 10;
     const newValue = Math.max(1, calculatedValue);
     setQuantidade(String(newValue));
-};
+  };
 
   // Função para obter a data atual formatada
   const getTodayDate = useCallback(() => {
@@ -129,7 +143,7 @@ export default function Input() {
   // Efeito para carregar dados quando houver params.id
   useEffect(() => {
     if (params.id) {
-      console.log('Carregando valores iniciais:', params);
+      console.log('Loading initial values:', params);
 
       setDescricao(params.descricao as string);
       setCaixa(params.caixa as string);
@@ -137,7 +151,7 @@ export default function Input() {
       setQuantidade(params.quantidade?.toString() ?? '');
 
       const valorNumerico = Number(params.valor);
-      console.log('Valor numérico:', valorNumerico);
+      console.log('Numerical value:', valorNumerico);
       setValor(formatarMoeda(valorNumerico));
 
       setTipoTransacao(params.tipo_transacao as TipoTransacao);
@@ -160,7 +174,7 @@ export default function Input() {
       const categoriasUnicas = [...new Set((resultado as Transacao[]).map(t => t.categoria))];
       setCategorias(categoriasUnicas);
     } catch (error) {
-      console.error('Erro ao carregar categorias:', error);
+      console.error('Error loading categories:', error);
     }
   }
   async function carregarCaixas() {
@@ -169,7 +183,7 @@ export default function Input() {
       const caixasUnicas = [...new Set((resultado as Transacao[]).map(t => t.caixa))];
       setCaixas(caixasUnicas);
     } catch (error) {
-      console.error('Erro ao carregar caixas:', error);
+      console.error('Error loading wallets:', error);
     }
   }
 
@@ -197,7 +211,7 @@ export default function Input() {
 
   const handleValorChange = (text: string) => {
     const valorFormatado = formatarInput(text);
-    console.log('Valor formatado:', valorFormatado);
+    console.log('Formatted value:', valorFormatado);
     setValor(valorFormatado);
   };
 
@@ -216,17 +230,17 @@ export default function Input() {
   async function salvar() {
     try {
       if (!descricao || !caixa || !categoria || !quantidade || !valor || !data) {
-        Alert.alert('Erro', 'Preencha todos os campos');
+        Alert.alert(t('return.error'), t('return.fill_fields'));
         return;
       }
 
       if (!validarData(data)) {
-        Alert.alert('Erro', 'Data inválida! Use o formato DD/MM/AAAA');
+        Alert.alert(t('return.error'), t('return.date_format'));
         return;
       }
 
       const valorNumerico = Number(valor.replace(/\D/g, ''));
-      console.log('Valor a ser salvo:', valorNumerico);
+      console.log('Amount to be saved:', valorNumerico);
 
       const transacao = {
         descricao,
@@ -240,22 +254,22 @@ export default function Input() {
       };
 
       if (params.id) {
-        console.log('Atualizando transação:', { id: params.id, ...transacao });
+        console.log('Updating transaction:', { id: params.id, ...transacao });
         await atualizarTransacao({
           id: Number(params.id),
           ...transacao
         });
       } else {
-        console.log('Salvando nova transação:', transacao);
+        console.log('Saving new transaction:', transacao);
         await salvarTransacao(transacao);
       }
 
-      Alert.alert('Sucesso', 'Transação salva com sucesso!');
+      Alert.alert(t('return.success'), t('return.transaction_saved'));
       limparCampos();
       router.replace('/input');
     } catch (error) {
-      console.error('Erro ao salvar:', error);
-      Alert.alert('Erro', 'Não foi possível salvar a transação');
+      console.error('Error saving:', error);
+      Alert.alert(t('return.error'), t('return.error_save_transaction'));
     }
   }
 
@@ -265,11 +279,6 @@ export default function Input() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 10}
     >
-      <Text style={[styles.title, { color: colors.text }]}>
-        {params.id ? `Editar Transação (${params.id})` : 'Nova Transação'}
-      </Text>
-      <View style={[styles.separator, { backgroundColor: colors.borderColor }]} />
-
       <ScrollView
         style={styles.formContainer}
         showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
@@ -278,18 +287,18 @@ export default function Input() {
       // Removendo nestedScrollEnabled aqui, pois o modal terá sua própria FlatList
       >
         <View style={styles.inputContainer}>
-          <Text style={[styles.label, { color: colors.text }]}>Descrição da Transação</Text>
+          <Text style={[styles.label, { color: colors.text }]}>{t('input_finance.description')}</Text>
           <ThemedInput
             value={descricao}
             onChangeText={setDescricao}
-            placeholder="Digite a descrição da transação"
+            placeholder={t('placeholder.transaction')}
             placeholderTextColor={colors.text}
           />
         </View>
 
         {/* Campo Caixa com Botão de Modal */}
         <View style={styles.inputContainer}>
-          <Text style={[styles.label, { color: colors.text }]}>Caixa</Text>
+          <Text style={[styles.label, { color: colors.text }]}>{t('input_finance.wallet')}</Text>
           <View style={[
             styles.inputWithButtonContainer,
             {
@@ -307,7 +316,7 @@ export default function Input() {
                 // com o modal. Decidi remover o `onFocus` e `onBlur` aqui.
                 filtrarCaixas(text);
               }}
-              placeholder="Crie ou selecione um Caixa"
+              placeholder={t('placeholder.wallet')}
               placeholderTextColor={colors.text}
               style={styles.inputInsideButtonContainer}
             />
@@ -315,14 +324,14 @@ export default function Input() {
               onPress={() => setShowCaixaModal(true)} // Abre o modal
               style={[styles.buttonOnRight, { width: 40, backgroundColor: colors.primary }]}
             >
-              <AntDesign name="select1" size={20} color="white" />
+              <AntDesign name="select" size={20} color="white" />
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Campo Categoria com Botão de Modal */}
         <View style={styles.inputContainer}>
-          <Text style={[styles.label, { color: colors.text }]}>Categoria</Text>
+          <Text style={[styles.label, { color: colors.text }]}>{t('input_finance.category')}</Text>
           <View style={[
             styles.inputWithButtonContainer,
             {
@@ -337,7 +346,7 @@ export default function Input() {
                 setCategoria(text);
                 filtrarCategorias(text);
               }}
-              placeholder="Crie ou selecione uma Categoria"
+              placeholder={t('placeholder.category')}
               placeholderTextColor={colors.text}
               style={styles.inputInsideButtonContainer}
             />
@@ -345,13 +354,13 @@ export default function Input() {
               onPress={() => setShowCategoriaModal(true)} // Abre o modal
               style={[styles.buttonOnRight, { width: 40, backgroundColor: colors.primary }]}
             >
-              <AntDesign name="select1" size={20} color="white" />
+              <AntDesign name="select" size={20} color="white" />
             </TouchableOpacity>
           </View>
         </View>
 
         <View style={styles.inputContainer}>
-          <Text style={[styles.label, { color: colors.text }]}>Quantidade</Text>
+          <Text style={[styles.label, { color: colors.text }]}>{t('input_finance.quantity')}</Text>
           <QuantityInput
             value={quantidade}
             onIncrement={handleIncrement}
@@ -362,7 +371,7 @@ export default function Input() {
         </View>
 
         <View style={styles.inputContainer}>
-          <Text style={[styles.label, { color: colors.text }]}>Valor</Text>
+          <Text style={[styles.label, { color: colors.text }]}>{t('input_finance.value')}</Text>
           <ThemedInput
             value={valor}
             onChangeText={handleValorChange}
@@ -373,7 +382,7 @@ export default function Input() {
         </View>
 
         <View style={styles.inputContainer}>
-          <Text style={[styles.label, { color: colors.text }]}>Tipo de Transação</Text>
+          <Text style={[styles.label, { color: colors.text }]}>{t('input_finance.type')}</Text>
           <ThemedPicker
             selectedValue={tipoTransacao}
             onValueChange={(value) => setTipoTransacao(value as TipoTransacao)}
@@ -390,18 +399,17 @@ export default function Input() {
         </View>
 
         <View style={styles.inputContainer}>
-          <Text style={[styles.label, { color: colors.text }]}>Ação</Text>
-          <ThemedPicker
+          <Text style={[styles.label, { color: colors.text }]}>{t('input_finance.action')}</Text>
+          <ThemedToggle<Acao>
+            options={acaoOptions}
             selectedValue={acao}
-            onValueChange={(value) => setAcao(value as Acao)}
-          >
-            <ThemedPicker.Item label="Entrada" value="entrada" />
-            <ThemedPicker.Item label="Saída" value="saida" />
-          </ThemedPicker>
+            onValueChange={setAcao}
+            activeColor={getStatusColor()}
+          />
         </View>
 
         <View style={styles.inputContainer}>
-          <Text style={[styles.label, { color: colors.text }]}>Data</Text>
+          <Text style={[styles.label, { color: colors.text }]}>{t('input_finance.date')}</Text>
           <TouchableOpacity onPress={() => setShowDatePicker(true)} style={[styles.dateInputButton, { borderColor: colors.borderColor, backgroundColor: colors.inputBackground }]}>
             <Text style={[styles.dateInputText, { color: data ? colors.text : colors.text, backgroundColor: colors.inputBackground }]}>
               {data || "Selecionar Data"}
@@ -420,7 +428,7 @@ export default function Input() {
 
           <ButtonTT
             buttonStyle={{ marginTop: 10 }}
-            title="Hoje"
+            title={t('button.today')}
             onPress={() => {
               const today = new Date();
               setData(getTodayDate());
@@ -437,7 +445,7 @@ export default function Input() {
       <View style={styles.buttonContainer}>
         {params.id && (
           <ButtonTT
-            title="Cancelar Edição"
+            title={t('button.cancel_edit')}
             onPress={() => {
               limparCampos();
               router.replace('/input');
@@ -446,12 +454,12 @@ export default function Input() {
           />
         )}
         <ButtonTT
-          title={"Limpar"}
+          title={t('button.clean')}
           onPress={() => limparCampos()}
           color={colors.info}
         />
         <ButtonTT
-          title={params.id ? "Salvar Alterações" : "Salvar"}
+          title={params.id ? t('button.save_edit') : t('button.save')}
           onPress={salvar}
           color={colors.success}
         />
@@ -466,9 +474,9 @@ export default function Input() {
       >
         <View style={styles.centeredView}>
           <View style={[styles.modalView, { backgroundColor: colors.background, borderColor: colors.borderColor }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Crie ou selecione um Caixa</Text>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>{t('placeholder.wallet')}</Text>
             <ThemedInput
-              placeholder="Buscar/Criar caixa..."
+              placeholder={t('placeholder.wallet_create')}
               value={caixa} // Usa o mesmo estado para a busca
               onChangeText={(text) => {
                 setCaixa(text);
@@ -500,8 +508,8 @@ export default function Input() {
               style={styles.modalList}
             />
             <View style={{ flexDirection: 'row' }}>
-              <ButtonTT title="Limpar" onPress={() => setCaixa('')} color={colors.info} />
-              <ButtonTT title="Criar" onPress={() => setShowCaixaModal(false)} color={colors.success} />
+              <ButtonTT title={t('button.clean')} onPress={() => setCaixa('')} color={colors.info} />
+              <ButtonTT title={t('button.create')} onPress={() => setShowCaixaModal(false)} color={colors.success} />
             </View>
           </View>
         </View>
@@ -516,9 +524,9 @@ export default function Input() {
       >
         <View style={styles.centeredView}>
           <View style={[styles.modalView, { backgroundColor: colors.background, borderColor: colors.borderColor }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Crie ou selecione uma Categoria</Text>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>{t('placeholder.category')}</Text>
             <ThemedInput
-              placeholder="Buscar/Criar categoria..."
+              placeholder={t('placeholder.category_create')}
               value={categoria} // Usa o mesmo estado para a busca
               onChangeText={(text) => {
                 setCategoria(text);
@@ -550,8 +558,8 @@ export default function Input() {
               style={styles.modalList}
             />
             <View style={{ flexDirection: 'row' }}>
-              <ButtonTT title="Limpar" onPress={() => setCategoria('')} color={colors.info} />
-              <ButtonTT title="Criar" onPress={() => setShowCategoriaModal(false)} color={colors.success} />
+              <ButtonTT title={t('button.clean')} onPress={() => setCategoria('')} color={colors.info} />
+              <ButtonTT title={t('button.create')} onPress={() => setShowCategoriaModal(false)} color={colors.success} />
             </View>
           </View>
         </View>

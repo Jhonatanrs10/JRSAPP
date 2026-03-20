@@ -1,4 +1,5 @@
 // app/index.js
+import { useTranslation } from 'react-i18next';
 import { StatusBar } from 'expo-status-bar';
 import { View, Text, StyleSheet, Platform, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -10,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'; // Importe u
 import Constants from 'expo-constants';
 
 export default function HomeScreen() {
+  const { t } = useTranslation();
   const version = Constants.expoConfig?.version || '1.0.0';
 
   const router = useRouter();
@@ -37,16 +39,16 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         showsHorizontalScrollIndicator={false}
       >
-        <ButtonTTAPP imageSource={require('../assets/images/BTTAPP01.png')} title="Animes" onPress={() => router.push('/(animes)')} />
+        <ButtonTTAPP imageSource={require('../assets/images/BTTAPP01.png')} title={t('animes')} onPress={() => router.push('/(animes)')} />
         <View style={styles.spacer} />
-        <ButtonTTAPP imageSource={require('../assets/images/BTTAPP02.png')} title="Finanças" onPress={() => router.push('/(finance)')} />
+        <ButtonTTAPP imageSource={require('../assets/images/BTTAPP02.png')} title={t('finance')} onPress={() => router.push('/(finance)')} />
         <View style={styles.spacer} />
-        <ButtonTTAPP imageSource={require('../assets/images/BTTAPP03.png')} title="Mercado" onPress={() => router.push('/(market)')} />
+        <ButtonTTAPP imageSource={require('../assets/images/BTTAPP03.png')} title={t('market')} onPress={() => router.push('/(market)')} />
         <View style={styles.spacer} />
 
         <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', marginTop: 50 }}>
-          <Text style={{ color: "white", fontSize: 10, fontWeight: 'bold' }}>Copyright © 2026 JRSAPP. Todos os direitos reservados.</Text>
-          <Text style={{ color: "white", fontSize: 8 }}>Version {version} By Jhonatanrs</Text>
+          <Text style={{ color: "white", fontSize: 10, fontWeight: 'bold' }}>Copyright © 2026 JRSAPP. {t('copyright')}.</Text>
+          <Text style={{ color: "white", fontSize: 8 }}>v{version} By Jhonatanrs</Text>
         </View>
 
       </ScrollView>
