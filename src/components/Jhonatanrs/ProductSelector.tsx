@@ -1,17 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { Text, View, TextInput } from '../../components/Themed';
+import React, { useState, useEffect, useRef } from 'react';
+import { Text, View } from '../../components/Themed';
 import {
   Modal,
   FlatList,
   Pressable,
   TouchableOpacity,
   StyleSheet,
+  Alert,
+  Keyboard,
+  TextInput as RNTextInput,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
-import Colors from '../../constants/Colors';
 import { useColorScheme } from '../../components/useColorScheme';
-
 
 interface ProductSelectorProps {
   selectedProduct: string;
@@ -23,8 +24,20 @@ export default function ProductSelector({
   onSelect,
 }: ProductSelectorProps) {
   const [modalVisible, setModalVisible] = useState(false);
-  const [searchText, setSearchText] = useState(''); // Estado para o campo de busca
+  const [searchText, setSearchText] = useState('');
   const [products, setProducts] = useState<string[]>([]);
+  const [isRendered, setIsRendered] = useState(false);
+
+  // Referência tipada corretamente para evitar o erro vermelho
+  const inputRef = useRef<RNTextInput>(null);
+
+  const colorScheme = useColorScheme() ?? 'light';
+  const colors = {
+    background: colorScheme === 'dark' ? '#000' : '#fff',
+    inputBg: colorScheme === 'dark' ? '#1c1c1e' : '#f2f2f7',
+    text: colorScheme === 'dark' ? '#fff' : '#000',
+    itemBorder: colorScheme === 'dark' ? '#333' : '#eee',
+  };
 
   useFocusEffect(
     React.useCallback(() => {
@@ -36,64 +49,105 @@ export default function ProductSelector({
     }, [])
   );
 
+  // O SEGREDO: Monitorar quando o input é renderizado para focar
+  useEffect(() => {
+    if (isRendered) {
+      const timer = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isRendered]);
+
   const filteredProducts = products.filter((p) =>
     p.toLowerCase().includes(searchText.toLowerCase())
   );
 
-  // Função para fechar o modal e limpar o campo de busca
-  const closeModalAndClearSearch = () => {
-    setModalVisible(false);
-    setSearchText(''); // Limpa o campo de busca
+  const productExists = products.some(
+    (p) => p.toLowerCase() === searchText.trim().toLowerCase()
+  );
+
+  const addNewProduct = async () => {
+    const newName = searchText.trim();
+    if (!newName) return;
+    try {
+      const updatedProducts = [...products, newName];
+      await AsyncStorage.setItem('products', JSON.stringify(updatedProducts));
+      setProducts(updatedProducts);
+      onSelect(newName);
+      closeModalAndClearSearch();
+    } catch (error) {
+      Alert.alert('Erro', 'Não foi possível salvar o produto.');
+    }
   };
 
-  const colorScheme = useColorScheme() ?? 'light';
-  const colors = Colors[colorScheme];
+  const closeModalAndClearSearch = () => {
+    setIsRendered(false);
+    setModalVisible(false);
+    setSearchText('');
+  };
 
   return (
-    <View style={{backgroundColor: colors.background}}>
+    <View style={{ backgroundColor: 'transparent' }}>
       <Pressable
-        style={[styles.selectorButton, { backgroundColor: colors.inputBackground }]}
+        style={[styles.selectorButton, { backgroundColor: colors.inputBg }]}
         onPress={() => setModalVisible(true)}
       >
-        <Text style={[styles.selectorText, {flex: 1, backgroundColor: colors.inputBackground, color: colors.text }]}>
+        <Text style={[styles.selectorText, { color: colors.text }]}>
           {selectedProduct || 'Selecione um produto...'}
         </Text>
       </Pressable>
 
-      <Modal visible={modalVisible} animationType="slide">
-        <View style={styles.modalContainer}>
-          <Text style={styles.modalTitle}>Selecione um produto</Text>
-
-          <TextInput
-            placeholder="Buscar produto..."
-            placeholderTextColor="#888"
-            value={searchText}
-            onChangeText={setSearchText}
-            style={styles.searchInput}
-          />
+      <Modal
+        visible={modalVisible}
+        animationType="slide"
+        onShow={() => setIsRendered(true)} // Dispara a renderização do conteúdo
+      >
+        <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+          <Text style={[styles.modalTitle, { color: colors.text }]}>Buscar ou Adicionar</Text>
 
           <FlatList
             data={filteredProducts}
             keyExtractor={(item) => item}
+            keyboardShouldPersistTaps="always"
             renderItem={({ item }) => (
               <TouchableOpacity
                 onPress={() => {
                   onSelect(item);
-                  closeModalAndClearSearch(); // Chama a nova função ao selecionar
+                  closeModalAndClearSearch();
                 }}
-                style={styles.productItem}
+                style={[styles.productItem, { borderBottomColor: colors.itemBorder }]}
               >
-                <Text style={styles.productText}>{item}</Text>
+                <Text style={[styles.productText, { color: colors.text }]}>{item}</Text>
               </TouchableOpacity>
             )}
           />
 
-          <Pressable
-            onPress={closeModalAndClearSearch} // Chama a nova função ao cancelar
-            style={styles.cancelButton}
-          >
-            <Text style={styles.cancelText}>Cancelar</Text>
+          <Pressable onPress={closeModalAndClearSearch} style={styles.cancelButton}>
+            <Text style={styles.cancelText}>Fechar</Text>
           </Pressable>
+
+          {searchText.length > 0 && !productExists && (
+            <TouchableOpacity onPress={addNewProduct} style={styles.addNewButton}>
+              <Text style={styles.addNewText}>+ Adicionar</Text>
+            </TouchableOpacity>
+          )}
+
+          {isRendered && (
+            <RNTextInput
+              ref={inputRef}
+              placeholder="Nome do produto..."
+              placeholderTextColor="#888"
+              value={searchText}
+              onChangeText={setSearchText}
+              style={[styles.searchInput, { backgroundColor: colors.inputBg, color: colors.text }]}
+              returnKeyType="done"
+              onSubmitEditing={() => {
+                if (searchText.length > 0 && !productExists) addNewProduct();
+              }}
+            />
+          )}
+
         </View>
       </Modal>
     </View>
@@ -101,46 +155,15 @@ export default function ProductSelector({
 }
 
 const styles = StyleSheet.create({
-  label: { fontSize: 18, textAlign: 'center', marginTop: 10, color: 'white' },
-  selectorButton: {
-    borderWidth: 0,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 10,
-    height: 80
-  },
-  selectorText: { fontSize: 20, textAlign: 'center', textAlignVertical: 'center' },
-  modalContainer: {
-    flex: 1,
-    padding: 20
-  },
-  modalTitle: {
-    fontSize: 22,
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  searchInput: {
-    padding: 10,
-    borderRadius: 8,
-    fontSize: 25,
-    height:90,
-    marginBottom: 15
-  },
-  productItem: {
-    justifyContent: 'center',
-    paddingVertical: 10,
-    height: 80,
-    borderBottomWidth: 1,
-    borderBottomColor: '#444',
-   
-  },
-  productText: { fontSize: 25,  textAlignVertical: 'center'},
-  cancelButton: {
-    backgroundColor: '#007AFF',
-    padding: 10,
-    borderRadius: 8,
-    marginTop: 20,
-  },
-  cancelText: { color: 'white', textAlign: 'center', fontSize: 16 },
+  selectorButton: { borderRadius: 12, padding: 10, marginBottom: 10, height: 80, justifyContent: 'center', alignItems: 'center' },
+  selectorText: { fontSize: 22, fontWeight: '500' },
+  modalContainer: { flex: 1, padding: 10 },
+  modalTitle: { fontSize: 24, marginBottom: 20, textAlign: 'center', fontWeight: 'bold' },
+  searchInput: { padding: 15, borderRadius: 10, fontSize: 22, height: 70, marginTop: 5 },
+  addNewButton: { backgroundColor: '#28a745', padding: 15, borderRadius: 10, marginVertical: 5, alignItems: 'center' },
+  addNewText: { color: 'white', fontSize: 20, fontWeight: 'bold' },
+  productItem: { paddingVertical: 18, borderBottomWidth: 1 },
+  productText: { fontSize: 22 },
+  cancelButton: { backgroundColor: '#FF3B30', padding: 15, borderRadius: 10, marginVertical: 5 },
+  cancelText: { color: 'white', textAlign: 'center', fontSize: 20, fontWeight: 'bold' },
 });

@@ -105,6 +105,17 @@ export default function App() {
       quantityToAdd = 1;
     }
 
+    if (selectedProduct !== 'Produto' && selectedProduct.trim() !== '') {
+    const savedProducts = await AsyncStorage.getItem('products');
+    const currentProducts: string[] = savedProducts ? JSON.parse(savedProducts) : [];
+
+    // Se o produto digitado não estiver na lista, adiciona ele
+    if (!currentProducts.includes(selectedProduct.trim())) {
+      const updatedProducts = [...currentProducts, selectedProduct.trim()];
+      await AsyncStorage.setItem('products', JSON.stringify(updatedProducts));
+      setProducts(updatedProducts); // Atualiza o estado local para o seletor refletir a mudança
+    }
+  }
 
     const newItem = { product: selectedProduct, unitValue, quantity: quantityToAdd };
     const updatedHistory = [...history, newItem];

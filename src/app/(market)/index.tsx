@@ -1,9 +1,9 @@
 import React, { useCallback, useState } from 'react';
-import { FlatList, StyleSheet, Pressable } from 'react-native';
+import { FlatList, StyleSheet, Pressable, Alert } from 'react-native';
 import { Text, View } from '../../components/Themed';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from 'expo-router';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import Colors from '../../constants/Colors';
 import { useColorScheme } from '../../components/useColorScheme';
@@ -27,18 +27,45 @@ export default function TwoScreen() {
     }
   };
 
-  const clearHistory = async () => {
-    await AsyncStorage.removeItem('history');
-    setHistory([]);
-  };
+const clearHistory = async () => {
+  Alert.alert(
+    "Limpar Histórico",
+    "Deseja apagar todos os itens da lista?",
+    [
+      { text: "Cancelar", style: "cancel" },
+      { 
+        text: "Limpar", 
+        style: "destructive", 
+        onPress: async () => {
+          // Sua lógica de limpar entra aqui
+          await AsyncStorage.removeItem('history');
+          setHistory([]);
+        } 
+      }
+    ]
+  );
+};
 
-  const deleteItem = async (visualIndex: number) => {
-    const realIndex = history.length - 1 - visualIndex;
-    const newHistory = [...history];
-    newHistory.splice(realIndex, 1);
-    setHistory(newHistory);
-    await AsyncStorage.setItem('history', JSON.stringify(newHistory));
-  };
+ const deleteItem = async (visualIndex: number) => {
+  Alert.alert(
+    "Remover Item",
+    "Deseja excluir este produto?",
+    [
+      { text: "Cancelar", style: "cancel" },
+      { 
+        text: "Excluir", 
+        onPress: async () => {
+          // Sua lógica original aqui
+          const realIndex = history.length - 1 - visualIndex;
+          const newHistory = [...history];
+          newHistory.splice(realIndex, 1);
+          setHistory(newHistory);
+          await AsyncStorage.setItem('history', JSON.stringify(newHistory));
+        } 
+      }
+    ]
+  );
+};
 
   useFocusEffect(
     useCallback(() => {

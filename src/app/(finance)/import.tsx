@@ -369,14 +369,14 @@ export default function Import() {
         }
 
         try {
-          const rawTipoTransacao = valores[cabecalho.indexOf('Tipo')];
+          const rawTipoTransacao = valores[cabecalho.indexOf('Type')];
           const tipoTransacaoValues: TipoTransacao[] = ['PIX', 'Dinheiro', 'Boleto', 'Débito', 'Crédito', 'TED', 'DOC', 'Distinto'];
           if (!tipoTransacaoValues.includes(rawTipoTransacao as TipoTransacao)) {
             throw new Error(`Invalid transaction type: "${rawTipoTransacao}"`);
           }
           const tipo_transacao: TipoTransacao = rawTipoTransacao as TipoTransacao;
 
-          const rawAcao = valores[cabecalho.indexOf('Ação')].toLowerCase();
+          const rawAcao = valores[cabecalho.indexOf('Action')].toLowerCase();
           let acao: Acao;
           if (rawAcao === 'entrada' || rawAcao === 'ganho') {
             acao = 'entrada';

@@ -157,8 +157,6 @@ open_vscode() {
 	echo ""
 	echo "Abrindo o projeto no VS Code (code .)..."
 	code . &
-	sleep 1
-	exit 0
 }
 
 show_menu() {
@@ -167,7 +165,7 @@ show_menu() {
 	echo "  Gerenciador de Projeto Expo Go"
 	echo "-------------------------------------"
 	echo "1. Rodar o Projeto (npx expo start)"
-	echo "2. Abrir Pasta no VS Code (code .) e Fechar Terminal"
+	echo "2. Abrir Pasta no VS Code (code .)"
 	echo "-------------------------------------"
 	echo "3. Instalar Dependências (npx expo install)"
 	echo "4. Verificar Saúde do Projeto (npx expo doctor)"
