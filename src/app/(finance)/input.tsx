@@ -296,7 +296,7 @@ export default function Input() {
           />
         </View>
 
-        {/* Campo Caixa com Botão de Modal */}
+    
         <View style={styles.inputContainer}>
           <Text style={[styles.label, { color: colors.text }]}>{t('input_finance.wallet')}</Text>
           <View style={[
@@ -329,7 +329,7 @@ export default function Input() {
           </View>
         </View>
 
-        {/* Campo Categoria com Botão de Modal */}
+      
         <View style={styles.inputContainer}>
           <Text style={[styles.label, { color: colors.text }]}>{t('input_finance.category')}</Text>
           <View style={[
@@ -465,7 +465,7 @@ export default function Input() {
         />
       </View>
 
-      {/* Modal para Caixa */}
+     
       <Modal
         animationType="slide"
         transparent={true}
@@ -515,7 +515,6 @@ export default function Input() {
         </View>
       </Modal>
 
-      {/* Modal para Categoria */}
       <Modal
         animationType="slide"
         transparent={true}

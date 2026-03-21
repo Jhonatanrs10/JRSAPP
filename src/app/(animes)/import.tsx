@@ -475,14 +475,15 @@ export default function Import() {
         )}
       </View>
 
-      <ButtonTT
+      {__DEV__ && (<ButtonTT
         title={t('button.import_test')}
         displayButton={true}
         buttonStyle={{ marginVertical: 5 }}
         onLongPress={importarDadosTesteAnimes}
         disabled={importando}
         color={colors.info}
-      />
+      />)}
+      
       <View style={styles.spacer} />
       <ButtonTT
         buttonStyle={{ marginVertical: 5, marginBottom: 30 }}

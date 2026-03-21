@@ -995,14 +995,14 @@ export default function Import() {
       )}
 
       <View style={styles.bottomSpacer} />
-      <ButtonTT
+      {__DEV__ && (<ButtonTT
         buttonStyle={{ marginVertical: 5 }}
         displayButton={true} // You might want to enable this for testing
         title={t('button.import_test')}
         onPress={importarDadosTeste}
         disabled={importando}
         color={colors.info}
-      />
+      />)}
       <ButtonTT
         buttonStyle={{ marginVertical: 5, marginBottom: 30 }}
         title={t('button.clear_database')}

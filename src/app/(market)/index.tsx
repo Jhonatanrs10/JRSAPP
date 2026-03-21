@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useCallback, useState } from 'react';
 import { FlatList, StyleSheet, Pressable, Alert } from 'react-native';
 import { Text, View } from '../../components/Themed';
@@ -15,6 +16,7 @@ type HistoryItem = {
 };
 
 export default function TwoScreen() {
+  const { t } = useTranslation();
   const [history, setHistory] = useState<HistoryItem[]>([]);
 
   const colorScheme = useColorScheme() ?? 'light';
@@ -27,45 +29,45 @@ export default function TwoScreen() {
     }
   };
 
-const clearHistory = async () => {
-  Alert.alert(
-    "Limpar Histórico",
-    "Deseja apagar todos os itens da lista?",
-    [
-      { text: "Cancelar", style: "cancel" },
-      { 
-        text: "Limpar", 
-        style: "destructive", 
-        onPress: async () => {
-          // Sua lógica de limpar entra aqui
-          await AsyncStorage.removeItem('history');
-          setHistory([]);
-        } 
-      }
-    ]
-  );
-};
+  const clearHistory = async () => {
+    Alert.alert(
+      t('return.clear_history'),
+      t('return.clear_history_msg'),
+      [
+        { text: t('button.cancel'), style: "cancel" },
+        {
+          text: t('button.clean'),
+          style: "destructive",
+          onPress: async () => {
+            // Sua lógica de limpar entra aqui
+            await AsyncStorage.removeItem('history');
+            setHistory([]);
+          }
+        }
+      ]
+    );
+  };
 
- const deleteItem = async (visualIndex: number) => {
-  Alert.alert(
-    "Remover Item",
-    "Deseja excluir este produto?",
-    [
-      { text: "Cancelar", style: "cancel" },
-      { 
-        text: "Excluir", 
-        onPress: async () => {
-          // Sua lógica original aqui
-          const realIndex = history.length - 1 - visualIndex;
-          const newHistory = [...history];
-          newHistory.splice(realIndex, 1);
-          setHistory(newHistory);
-          await AsyncStorage.setItem('history', JSON.stringify(newHistory));
-        } 
-      }
-    ]
-  );
-};
+  const deleteItem = async (visualIndex: number) => {
+    Alert.alert(
+      t('return.remove_item'),
+      t('return.remove_item_msg'),
+      [
+        { text: t('button.cancel'), style: "cancel" },
+        {
+          text: t('button.delete'),
+          onPress: async () => {
+            // Sua lógica original aqui
+            const realIndex = history.length - 1 - visualIndex;
+            const newHistory = [...history];
+            newHistory.splice(realIndex, 1);
+            setHistory(newHistory);
+            await AsyncStorage.setItem('history', JSON.stringify(newHistory));
+          }
+        }
+      ]
+    );
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -107,13 +109,13 @@ const clearHistory = async () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Histórico</Text>
+      <Text style={styles.title}>{t('input_market.history')}</Text>
 
       <FlatList
         data={[...history].reverse()} // <- apenas inverte visualmente
         keyExtractor={(_, index) => index.toString()}
         renderItem={({ item, index }) => (
-          <View style={[styles.itemContainer, { backgroundColor: colors.inputBackground}]}>
+          <View style={[styles.itemContainer, { backgroundColor: colors.inputBackground }]}>
             <Text style={styles.item}>
               {item.product} - {item.quantity} x{' '}
               {item.unitValue.toLocaleString('pt-BR', {
@@ -129,19 +131,19 @@ const clearHistory = async () => {
             </Text>
 
             <Pressable onPress={() => deleteItem(index)} style={styles.deleteButton}>
-              <Text style={styles.deleteButtonText}>Excluir</Text>
+              <Text style={styles.deleteButtonText}>{t('button.delete')}</Text>
             </Pressable>
           </View>
         )}
       />
 
       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-        <Pressable onLongPress={clearHistory} style={[styles.clearButton, { flex: 1, marginRight: 5 ,backgroundColor: colors.error}]}>
-          <Text style={styles.clearButtonText}>Limpar Histórico</Text>
+        <Pressable onLongPress={clearHistory} style={[styles.clearButton, { flex: 1, marginRight: 5, backgroundColor: colors.error }]}>
+          <Text style={styles.clearButtonText}>{t('button.clean')}</Text>
         </Pressable>
 
-        <Pressable onPress={exportHistory} style={[styles.exportButton, { flex: 1, marginLeft: 5 ,backgroundColor: colors.success}]}>
-          <Text style={styles.clearButtonText}>Exportar TXT</Text>
+        <Pressable onPress={exportHistory} style={[styles.exportButton, { flex: 1, marginLeft: 5, backgroundColor: colors.success }]}>
+          <Text style={styles.clearButtonText}>{t('button.export') + " TXT"}</Text>
         </Pressable>
       </View>
 

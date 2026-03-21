@@ -31,6 +31,7 @@
     "save": "Save",
     "save_edit": "Save Changes",
     "delete": "Delete",
+    "add": "Add",
     "clean": "Clean",
     "cancel_edit": "Cancel Edit",
     "cancel": "Cancel",
@@ -46,7 +47,8 @@
     "today": "Today",
     "create": "Create",
     "apply": "Apply",
-    "generated_pdf": "Generate PDF Report",
+    "close": "Close",
+    "generated_pdf": "Generate PDF Report"
   },
   "item": {
     "release": "Day to Watch",
@@ -79,6 +81,8 @@
     "error_share": "File sharing is not available on this platform.",
     "error_export_anime": "It was not possible to export the anime.",
     "error_export_finance": "It was not possible to export the transactions:",
+    "error_export_market": "It was not possible to export the Items:",
+    "error_export_items": "No products for export.",
     "error_save_transaction": "The transaction could not be saved.",
     "error_calc_value": "It was not possible to calculate the current value.",
     "error_calc_resume": "It was not possible to calculate the data summary.",
@@ -103,6 +107,7 @@
     "clear_anime_database_sure": "Are you sure you want to clear the entire anime database? This action cannot be undone.",
     "cleaned_anime_database": "Anime database successfully cleaned.",
     "cleaned_finance_database": "Finance database successfully cleaned.",
+    "cleaned_database": "Database successfully cleaned.",
     "clear_error": "It was not possible to clear the database.",
     "fill_fields": "Fill in all the fields.",
     "date_format": "Invalid date! Use the format DD/MM/YYYY",
@@ -127,6 +132,13 @@
     "total_cash_inflow":"Total Cash Inflow",
     "total_cash_outflow":"Total Cash Outflow",
     "total_cash_balance":"Overall Balance",
+    "invalid_value": "Invalid value",
+    "invalid_value_msg": "Please enter a unit value greater than zero.",
+    "remove_item": "Remove Item",
+    "remove_item_msg": "Do you want to delete this product?",
+    "clear_history": "Clear History",
+    "clear_history_msg": "Do you want to delete all items from the list?",
+    "warning_clean_database": "Do you want to delete the data from the database?"
   },
   "stats": {
     "total_animes": "Total Animes",
@@ -153,6 +165,13 @@
     "action": "Action",
     "date": "Date"
   },
+  "input_market": {
+    "history": "History",
+    "product": "Product",
+    "total": "Total",
+    "manage_products": "Manage Products",
+    "search_title": "Search or Add"
+  },
   "anime_tab": {
     "index": "Animes",
     "input": "Anime",
@@ -162,6 +181,11 @@
     "index": "Finance",
     "input": "Transaction",
     "import": "Dashboard"
+  },
+   "market_tab": {
+    "index": "Market",
+    "input": "Shopping",
+    "import": "Products"
   },
   "placeholder": {
     "search_animes": "Search for animes...",
@@ -174,6 +198,7 @@
     "wallet_create": "Search/Create wallet...",
     "category": "Create or select a Category",
     "category_create": "Search/Create category...",
+    "product_name": "Type the product name..."
   },
   "action": {
     "inflow": "Inflow",
@@ -206,6 +231,5 @@
     "november_ab": "Nov",
     "december": "December",
     "december_ab": "Dec"
-  },
-
+  }
 }

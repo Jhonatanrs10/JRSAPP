@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState } from 'react';
 import { Pressable, FlatList, StyleSheet, Alert } from 'react-native';
 import { Text, View } from '../../components/Themed';
@@ -10,6 +11,7 @@ import Colors from '../../constants/Colors';
 import { useColorScheme } from '../../components/useColorScheme';
 
 export default function ProductsScreen() {
+  const { t } = useTranslation();
   const [products, setProducts] = useState<string[]>([]);
 
   const colorScheme = useColorScheme() ?? 'light';
@@ -27,12 +29,28 @@ export default function ProductsScreen() {
   };
 
   const removeProductAtIndex = (visualIndex: number) => {
-    // Inverte o índice pois a lista é exibida com .reverse()
-    const realIndex = products.length - 1 - visualIndex;
-    const updated = [...products];
-    updated.splice(realIndex, 1);
-    saveProducts(updated);
-  };
+  Alert.alert(
+    t('return.remove_item'), // Título
+    t('return.remove_item_msg'), // Mensagem
+    [
+      {
+        text: t('button.cancel'),
+        style: "cancel"
+      },
+      {
+        text: t('button.delete'),
+        style: "destructive",
+        onPress: () => {
+          // Sua lógica original de cálculo de índice e salvamento
+          const realIndex = products.length - 1 - visualIndex;
+          const updated = [...products];
+          updated.splice(realIndex, 1);
+          saveProducts(updated);
+        }
+      }
+    ]
+  );
+};
 
   useFocusEffect(
     React.useCallback(() => {
@@ -40,10 +58,28 @@ export default function ProductsScreen() {
     }, [])
   );
 
+  const clearProducts = async () => {
+    Alert.alert(
+      t('button.clean'),
+      t('return.warning_clean_database'),
+      [
+        { text: t('button.cancel'), style: "cancel" },
+        {
+          text: t('button.clean'),
+          style: "destructive",
+          onPress: async () => {
+            await AsyncStorage.removeItem('products');
+            setProducts([]);
+          }
+        }
+      ]
+    );
+  };
+
   const exportProductsToFile = async () => {
     try {
       if (!products.length) {
-        Alert.alert('Aviso', 'Nenhum produto para exportar.');
+        Alert.alert(t('return.warning'), t('return.error_export_items'));
         return;
       }
 
@@ -56,8 +92,8 @@ export default function ProductsScreen() {
 
       await Sharing.shareAsync(fileUri);
     } catch (error) {
-      console.error('Erro ao exportar:', error);
-      Alert.alert('Erro', 'Falha ao exportar os produtos.');
+      console.error(t('return.error'), error);
+      Alert.alert(t('return.error'), t('return.error_export_market'));
     }
   };
 
@@ -85,20 +121,15 @@ export default function ProductsScreen() {
       const updated = [...new Set([...current, ...newItems])];
 
       await saveProducts(updated);
-      Alert.alert('Sucesso', 'Produtos importados com sucesso!');
+      Alert.alert(t('return.success'), t('return.import_completed'));
     } catch (error) {
       console.error('Erro ao importar:', error);
-      Alert.alert('Erro', 'Falha ao importar produtos.');
+      Alert.alert(t('return.error'), t('return.error_import_format'));
     }
   };
 
   return (
     <View style={{ flex: 1, padding: 20 }}>
-      <Text style={styles.title}>Gerenciar Produtos</Text>
-      
-      <Text style={[styles.subtitle, { color: colors.tabIconDefault }]}>
-        Lista de produtos cadastrados via Input
-      </Text>
 
       <FlatList
         data={[...products].reverse()} 
@@ -113,7 +144,7 @@ export default function ProductsScreen() {
         )}
         ListEmptyComponent={
           <Text style={{ textAlign: 'center', marginTop: 20, color: '#888' }}>
-            Nenhum produto cadastrado.
+            {t('return.none')}
           </Text>
         }
       />
@@ -123,15 +154,23 @@ export default function ProductsScreen() {
           onPress={importProductsFromFile} 
           style={[styles.button, { backgroundColor: colors.info }]}
         >
-          <Text style={styles.buttonText}>Importar TXT</Text>
+          <Text style={styles.buttonText}>{t('button.import')} TXT</Text>
         </Pressable>
 
         <Pressable 
           onPress={exportProductsToFile} 
           style={[styles.button, { backgroundColor: colors.success }]}
         >
-          <Text style={styles.buttonText}>Exportar TXT</Text>
+          <Text style={styles.buttonText}>{t('button.export')} TXT</Text>
         </Pressable>
+
+        <Pressable 
+          onLongPress={clearProducts} // Opcional: usar onLongPress para segurança extra
+          style={[styles.button, { backgroundColor: colors.error || '#FF3B30', marginBottom: 15 }]}
+        >
+          <Text style={styles.buttonText}>{t('button.clear_database')}</Text>
+        </Pressable>
+
       </View>
     </View>
   );
@@ -157,7 +196,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     marginTop: 10,
-    borderTopWidth: 1,
+    borderTopWidth: 0,
     borderTopColor: '#eee',
     paddingTop: 15
   }

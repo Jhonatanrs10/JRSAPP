@@ -31,6 +31,7 @@
     "save": "Salvar",
     "save_edit": "Salvar Alterações",
     "delete": "Excluir",
+    "add": "Adicionar",
     "clean": "Limpar",
     "cancel_edit": "Cancelar Edição",
     "cancel": "Cancelar",
@@ -46,6 +47,7 @@
     "today": "Hoje",
     "create": "Criar",
     "apply": "Aplicar",
+    "close": "Fechar",
     "generated_pdf": "Gerar Relatório PDF"
   },
   "item": {
@@ -79,6 +81,8 @@
     "error_share": "O compartilhamento de arquivos não está disponível nesta plataforma.",
     "error_export_anime": "Não foi possível exportar o anime.",
     "error_export_finance": "Não foi possível exportar as transações:",
+    "error_export_market": "Não foi possível exportar os itens:",
+    "error_export_items": "Nenhum produto para exportar.",
     "error_save_transaction": "A transação não pôde ser salva.",
     "error_calc_value": "Não foi possível calcular o valor atual.",
     "error_calc_resume": "Não foi possível calcular o resumo dos dados.",
@@ -103,6 +107,7 @@
     "clear_anime_database_sure": "Tem certeza de que deseja limpar todo o banco de dados de animes? Esta ação não pode ser desfeita.",
     "cleaned_anime_database": "Banco de dados de animes limpo com sucesso.",
     "cleaned_finance_database": "Banco de dados de finanças limpo com sucesso.",
+    "cleaned_database": "Banco de dados limpo com sucesso.",
     "clear_error": "Não foi possível limpar o banco de dados.",
     "fill_fields": "Preencha todos os campos.",
     "date_format": "Data inválida! Use o formato DD/MM/AAAA",
@@ -126,7 +131,14 @@
     "current_value_total": "Valor Atual (Total)",
     "total_cash_inflow": "Entrada Total de Caixa",
     "total_cash_outflow": "Saída Total de Caixa",
-    "total_cash_balance": "Saldo Geral"
+    "total_cash_balance": "Saldo Geral",
+    "invalid_value": "Valor inválido",
+    "invalid_value_msg": "Por favor, insira um valor unitário maior que zero.",
+    "remove_item": "Remover Item",
+    "remove_item_msg": "Deseja excluir este produto?",
+    "clear_history": "Limpar Histórico",
+    "clear_history_msg": "Deseja excluir todos os itens da lista?",
+    "warning_clean_database": "Deseja apagar os dados do banco de dados?"
   },
   "stats": {
     "total_animes": "Total de Animes",
@@ -153,6 +165,13 @@
     "action": "Ação",
     "date": "Data"
   },
+  "input_market": {
+    "history": "Histórico",
+    "product": "Produto",
+    "total": "Total",
+    "manage_products": "Gerenciar Produtos",
+    "search_title": "Pesquisar ou Adicionar"
+  },
   "anime_tab": {
     "index": "Animes",
     "input": "Anime",
@@ -162,6 +181,11 @@
     "index": "Finanças",
     "input": "Transação",
     "import": "Painel"
+  },
+  "market_tab": {
+    "index": "Mercado",
+    "input": "Compras",
+    "import": "Produtos"
   },
   "placeholder": {
     "search_animes": "Pesquisar animes...",
@@ -173,7 +197,8 @@
     "wallet": "Crie ou selecione uma carteira.",
     "wallet_create": "Pesquisar/Criar carteira...",
     "category": "Crie ou selecione uma categoria",
-    "category_create": "Pesquisar/Criar categoria..."
+    "category_create": "Pesquisar/Criar categoria...",
+    "product_name": "Digite o nome do produto..."
   },
   "action": {
     "inflow": "Entrada",

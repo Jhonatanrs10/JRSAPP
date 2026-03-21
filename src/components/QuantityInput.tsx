@@ -28,10 +28,10 @@ export function QuantityInput({
     return (
         <View style={styles.container}>
 
-            {/* Estrutura Principal: Simula o seasonGroup */}
+         
             <View style={[styles.seasonGroup, seasonGroupStyle]}>
 
-                {/* Botão de Decremento (-) */}
+              
                 <TouchableOpacity
                     // Replicando styles.valueButton do DynamicSeasonInput
                     style={[styles.valueButton, { backgroundColor: colors.primary }]}
@@ -41,7 +41,7 @@ export function QuantityInput({
                     <Text style={styles.valueButtonText}>−</Text>
                 </TouchableOpacity>
 
-                {/* Campo de Valor (Display de Texto) */}
+              
                 <Text
                     // Replicando styles.valueDisplay do DynamicSeasonInput
                     style={[
@@ -53,10 +53,10 @@ export function QuantityInput({
                         },
                     ]}
                 >
-                    {value || '0'} {/* Exibe o valor ou '0' se estiver vazio */}
+                    {value || '0'} 
                 </Text>
 
-                {/* Botão de Incremento (+) */}
+    
                 <TouchableOpacity
                     // Replicando styles.valueButton do DynamicSeasonInput
                     style={[styles.valueButton, { backgroundColor: colors.primary }]}

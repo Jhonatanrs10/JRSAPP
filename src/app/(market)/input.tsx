@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState, useRef, useEffect } from 'react';
 import { ScrollView, Pressable, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -10,11 +11,13 @@ import { useFocusEffect } from '@react-navigation/native';
 import Colors from '../../constants/Colors';
 import { useColorScheme } from '../../components/useColorScheme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard } from 'react-native';
 
 export default function App() {
+  const { t } = useTranslation();
   const [input1, setInput1] = useState('');
   const [input2, setInput2] = useState('1'); // This will now be controlled by QuantitySelector
-  const [selectedProduct, setSelectedProduct] = useState<string>('Produto');
+  const [selectedProduct, setSelectedProduct] = useState<string>(t('input_market.product'));
   const [products, setProducts] = useState<string[]>([]);
   const [history, setHistory] = useState<{ unitValue: number; quantity: number; product: string }[]>([]);
   const [accumulatedTotal, setAccumulatedTotal] = useState('R$ 0,00');
@@ -96,7 +99,7 @@ export default function App() {
     let quantityToAdd = parseInt(input2, 10);
 
     if (unitValue <= 0) {
-      Alert.alert('Valor inválido', 'Por favor, insira um valor unitário maior que zero.');
+      Alert.alert(t('return.invalid_value'), t('return.invalid_value_msg'));
       return;
     }
 
@@ -105,17 +108,17 @@ export default function App() {
       quantityToAdd = 1;
     }
 
-    if (selectedProduct !== 'Produto' && selectedProduct.trim() !== '') {
-    const savedProducts = await AsyncStorage.getItem('products');
-    const currentProducts: string[] = savedProducts ? JSON.parse(savedProducts) : [];
+    if (selectedProduct !== t('input_market.product') && selectedProduct.trim() !== '') {
+      const savedProducts = await AsyncStorage.getItem('products');
+      const currentProducts: string[] = savedProducts ? JSON.parse(savedProducts) : [];
 
-    // Se o produto digitado não estiver na lista, adiciona ele
-    if (!currentProducts.includes(selectedProduct.trim())) {
-      const updatedProducts = [...currentProducts, selectedProduct.trim()];
-      await AsyncStorage.setItem('products', JSON.stringify(updatedProducts));
-      setProducts(updatedProducts); // Atualiza o estado local para o seletor refletir a mudança
+      // Se o produto digitado não estiver na lista, adiciona ele
+      if (!currentProducts.includes(selectedProduct.trim())) {
+        const updatedProducts = [...currentProducts, selectedProduct.trim()];
+        await AsyncStorage.setItem('products', JSON.stringify(updatedProducts));
+        setProducts(updatedProducts); // Atualiza o estado local para o seletor refletir a mudança
+      }
     }
-  }
 
     const newItem = { product: selectedProduct, unitValue, quantity: quantityToAdd };
     const updatedHistory = [...history, newItem];
@@ -129,7 +132,7 @@ export default function App() {
 
     setInput1('');
     setInput2('1'); // Reset input2 after adding to history
-    setSelectedProduct('Produto');
+    setSelectedProduct(t('input_market.product'));
   };
 
   const handleNumberPressInput1 = (num: string) =>
@@ -166,10 +169,11 @@ export default function App() {
     setInput2(newQuantity.toString()); // Update input2 state with the new quantity as a string
   };
 
+
   return (
     <View style={{ flex: 1, paddingTop: 10, paddingHorizontal: 15, backgroundColor: colors.background }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background, height: 'auto' }}>
-        <Text style={styles.value}>Total </Text>
+        <Text style={styles.value}>{t('input_market.total') + " "}</Text>
         <Text
           style={[styles.value, { color: '#007700' }]}
           numberOfLines={1}
@@ -182,6 +186,10 @@ export default function App() {
       <ProductSelector
         selectedProduct={selectedProduct}
         onSelect={setSelectedProduct}
+        titleText={t('input_market.search_title')}
+        placeholderText={t('placeholder.product_name')}
+        closeText={t('button.close')}
+        addText={t('button.add')}
       />
 
       <Text style={styles.value}>{input2}x {formatToCurrency(input1)}</Text>

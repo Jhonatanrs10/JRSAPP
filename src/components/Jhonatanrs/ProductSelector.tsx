@@ -7,31 +7,43 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  Keyboard,
   TextInput as RNTextInput,
+  KeyboardAvoidingView,
+  Platform,
+  StatusBar
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { useColorScheme } from '../../components/useColorScheme';
 
+// 1. Atualizando a Interface para aceitar as novas props
 interface ProductSelectorProps {
   selectedProduct: string;
   onSelect: (product: string) => void;
+  // Novas props de texto
+  titleText?: string;
+  placeholderText?: string;
+  closeText?: string;
+  addText?: string;
 }
 
 export default function ProductSelector({
   selectedProduct,
   onSelect,
+  titleText = "Buscar ou Adicionar", // Valores padrão (fallback)
+  placeholderText = "Nome do produto...",
+  closeText = "Fechar",
+  addText = "+ Adicionar"
 }: ProductSelectorProps) {
   const [modalVisible, setModalVisible] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [products, setProducts] = useState<string[]>([]);
   const [isRendered, setIsRendered] = useState(false);
 
-  // Referência tipada corretamente para evitar o erro vermelho
   const inputRef = useRef<RNTextInput>(null);
 
   const colorScheme = useColorScheme() ?? 'light';
+  
   const colors = {
     background: colorScheme === 'dark' ? '#000' : '#fff',
     inputBg: colorScheme === 'dark' ? '#1c1c1e' : '#f2f2f7',
@@ -49,7 +61,6 @@ export default function ProductSelector({
     }, [])
   );
 
-  // O SEGREDO: Monitorar quando o input é renderizado para focar
   useEffect(() => {
     if (isRendered) {
       const timer = setTimeout(() => {
@@ -77,7 +88,7 @@ export default function ProductSelector({
       onSelect(newName);
       closeModalAndClearSearch();
     } catch (error) {
-      Alert.alert('Erro', 'Não foi possível salvar o produto.');
+      Alert.alert('Error', 'The product could not be saved.');
     }
   };
 
@@ -94,61 +105,67 @@ export default function ProductSelector({
         onPress={() => setModalVisible(true)}
       >
         <Text style={[styles.selectorText, { color: colors.text }]}>
-          {selectedProduct || 'Selecione um produto...'}
+          {selectedProduct || placeholderText}
         </Text>
       </Pressable>
 
       <Modal
         visible={modalVisible}
         animationType="slide"
-        onShow={() => setIsRendered(true)} // Dispara a renderização do conteúdo
+        onShow={() => setIsRendered(true)}
       >
-        <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
-          <Text style={[styles.modalTitle, { color: colors.text }]}>Buscar ou Adicionar</Text>
+        {/* O KeyboardAvoidingView deve ser o primeiro filho do Modal */}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1, backgroundColor: colors.background }} // Fundo aplicado aqui
+        >
+          <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>{titleText}</Text>
 
-          <FlatList
-            data={filteredProducts}
-            keyExtractor={(item) => item}
-            keyboardShouldPersistTaps="always"
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                onPress={() => {
-                  onSelect(item);
-                  closeModalAndClearSearch();
-                }}
-                style={[styles.productItem, { borderBottomColor: colors.itemBorder }]}
-              >
-                <Text style={[styles.productText, { color: colors.text }]}>{item}</Text>
+            <FlatList
+              data={filteredProducts}
+              keyExtractor={(item) => item}
+              keyboardShouldPersistTaps="always"
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  onPress={() => {
+                    onSelect(item);
+                    closeModalAndClearSearch();
+                  }}
+                  style={[styles.productItem, { borderBottomColor: colors.itemBorder }]}
+                >
+                  <Text style={[styles.productText, { color: colors.text }]}>{item}</Text>
+                </TouchableOpacity>
+              )}
+            />
+
+            <Pressable onPress={closeModalAndClearSearch} style={styles.cancelButton}>
+              <Text style={styles.cancelText}>{closeText}</Text>
+            </Pressable>
+
+            {searchText.length > 0 && !productExists && (
+              <TouchableOpacity onPress={addNewProduct} style={styles.addNewButton}>
+                <Text style={styles.addNewText}>{addText}</Text>
               </TouchableOpacity>
             )}
-          />
 
-          <Pressable onPress={closeModalAndClearSearch} style={styles.cancelButton}>
-            <Text style={styles.cancelText}>Fechar</Text>
-          </Pressable>
-
-          {searchText.length > 0 && !productExists && (
-            <TouchableOpacity onPress={addNewProduct} style={styles.addNewButton}>
-              <Text style={styles.addNewText}>+ Adicionar</Text>
-            </TouchableOpacity>
-          )}
-
-          {isRendered && (
-            <RNTextInput
-              ref={inputRef}
-              placeholder="Nome do produto..."
-              placeholderTextColor="#888"
-              value={searchText}
-              onChangeText={setSearchText}
-              style={[styles.searchInput, { backgroundColor: colors.inputBg, color: colors.text }]}
-              returnKeyType="done"
-              onSubmitEditing={() => {
-                if (searchText.length > 0 && !productExists) addNewProduct();
-              }}
-            />
-          )}
-
-        </View>
+            {isRendered && (
+              <RNTextInput
+                ref={inputRef}
+                // 5. Usando a prop placeholderText
+                placeholder={placeholderText}
+                placeholderTextColor="#888"
+                value={searchText}
+                onChangeText={setSearchText}
+                style={[styles.searchInput, { backgroundColor: colors.inputBg, color: colors.text }]}
+                returnKeyType="done"
+                onSubmitEditing={() => {
+                  if (searchText.length > 0 && !productExists) addNewProduct();
+                }}
+              />
+            )}
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -157,7 +174,7 @@ export default function ProductSelector({
 const styles = StyleSheet.create({
   selectorButton: { borderRadius: 12, padding: 10, marginBottom: 10, height: 80, justifyContent: 'center', alignItems: 'center' },
   selectorText: { fontSize: 22, fontWeight: '500' },
-  modalContainer: { flex: 1, padding: 10 },
+  modalContainer: { flex: 1, padding: 10, paddingTop: 25 },
   modalTitle: { fontSize: 24, marginBottom: 20, textAlign: 'center', fontWeight: 'bold' },
   searchInput: { padding: 15, borderRadius: 10, fontSize: 22, height: 70, marginTop: 5 },
   addNewButton: { backgroundColor: '#28a745', padding: 15, borderRadius: 10, marginVertical: 5, alignItems: 'center' },
