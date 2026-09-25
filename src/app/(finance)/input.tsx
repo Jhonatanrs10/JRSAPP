@@ -12,18 +12,17 @@ import {
   TouchableOpacity,
   Platform,
   KeyboardAvoidingView,
-  Modal, // Importar Modal
+  Modal,
 } from 'react-native';
 import { Text, View } from '../../components/Themed';
 import { ThemedInput } from '../../components/ThemedInput';
 import { ThemedPicker } from '../../components/ThemedPicker';
 import { buscarTransacoes, salvarTransacao, atualizarTransacao } from '../../database/db';
 import { formatarMoeda, formatarInput, formatarData, validarData, converterParaCentavos } from '../../utils/formatacao';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, Stack, useFocusEffect } from 'expo-router';
 import Colors from '../../constants/Colors';
 import { useColorScheme } from '../../components/useColorScheme';
 import { ThemedToggle, ToggleOption } from '../../components/ThemedToggle';
-import { useFocusEffect } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { QuantityInput } from '@/src/components/QuantityInput';
 
@@ -61,8 +60,8 @@ export default function Input() {
   const [caixasFiltradas, setCaixasFiltradas] = useState<string[]>([]);
   const [categorias, setCategorias] = useState<string[]>([]);
   const [categoriasFiltradas, setCategoriasFiltradas] = useState<string[]>([]);
-  const [mostrarCategoriaSugestao, setMostrarCategoriaSugestao] = useState(false); // Renomeado para clareza
-  const [mostrarCaixaSugestao, setMostrarCaixaSugestao] = useState(false); // Renomeado para clareza
+  const [mostrarCategoriaSugestao, setMostrarCategoriaSugestao] = useState(false);
+  const [mostrarCaixaSugestao, setMostrarCaixaSugestao] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDateObject, setSelectedDateObject] = useState<Date>(new Date());
 
@@ -71,17 +70,14 @@ export default function Input() {
     { label: t('action.outflow'), value: 'saida' },
   ];
 
-  // LÓGICA FORA DO COMPONENTE:
   const getStatusColor = () => {
-    if (acao === 'entrada') return colors.success;      // Azul
-    if (acao === 'saida') return colors.warning2;  // Verde
+    if (acao === 'entrada') return colors.success;
+    if (acao === 'saida') return colors.warning2;
   };
 
-  // NOVOS ESTADOS PARA MODAIS
   const [showCaixaModal, setShowCaixaModal] = useState(false);
   const [showCategoriaModal, setShowCategoriaModal] = useState(false);
 
-  // Funções de incremento e decremento
   const handleIncrement = () => {
     const numericValue = parseInt(quantidade || '0', 10);
     setQuantidade(String(numericValue + 1));
@@ -89,12 +85,11 @@ export default function Input() {
 
   const handleDecrement = () => {
     const numericValue = parseInt(quantidade || '0', 10);
-    if (numericValue > 1) { // Evita valores negativos ou zero
+    if (numericValue > 1) {
       setQuantidade(String(numericValue - 1));
     }
   };
 
-  // Funções de incremento e decremento2
   const handleIncrement2 = () => {
     const numericValue = parseInt(quantidade || '0', 10);
     setQuantidade(String(numericValue + 10));
@@ -107,7 +102,6 @@ export default function Input() {
     setQuantidade(String(newValue));
   };
 
-  // Função para obter a data atual formatada
   const getTodayDate = useCallback(() => {
     const hoje = new Date();
     const dia = String(hoje.getDate()).padStart(2, '0');
@@ -116,7 +110,7 @@ export default function Input() {
     return `${dia}/${mes}/${ano}`;
   }, []);
 
-  // Função para limpar os campos e voltar ao modo Nova Transação
+  // 1. Limpa o formulário E cancela o modo de edição (remove o ID da rota)
   const limparCampos = useCallback(() => {
     setDescricao('');
     setCaixa('');
@@ -128,10 +122,24 @@ export default function Input() {
     const today = new Date();
     setData(getTodayDate());
     setSelectedDateObject(today);
-    router.setParams({});
+    router.setParams({ id: undefined });
   }, [router, getTodayDate]);
 
-  // Efeito para limpar campos quando a tab recebe foco
+  // 2. Limpa APENAS os valores dos inputs visuais (preserva a edição ativa)
+  const limparApenasCamposFormulario = () => {
+    setDescricao('');
+    setCaixa('');
+    setCategoria('');
+    setQuantidade('1');
+    setValor('');
+    setTipoTransacao('PIX');
+    setAcao('saida');
+    const today = new Date();
+    setData(getTodayDate());
+    setSelectedDateObject(today);
+  };
+
+  // Garante que o formulário abra limpo para novos cadastros se acessado sem ID
   useFocusEffect(
     useCallback(() => {
       if (!params.id) {
@@ -140,33 +148,26 @@ export default function Input() {
     }, [params.id, limparCampos])
   );
 
-  // Efeito para carregar dados quando houver params.id
   useEffect(() => {
     if (params.id) {
-      console.log('Loading initial values:', params);
+      setDescricao(params.descricao as string || '');
+      setCaixa(params.caixa as string || '');
+      setCategoria(params.categoria as string || '');
+      setQuantidade(params.quantidade?.toString() ?? '1');
 
-      setDescricao(params.descricao as string);
-      setCaixa(params.caixa as string);
-      setCategoria(params.categoria as string);
-      setQuantidade(params.quantidade?.toString() ?? '');
-
-      const valorNumerico = Number(params.valor);
-      console.log('Numerical value:', valorNumerico);
+      const valorNumerico = Number(params.valor || 0);
       setValor(formatarMoeda(valorNumerico));
 
-      setTipoTransacao(params.tipo_transacao as TipoTransacao);
-      setAcao(params.acao as Acao);
-      setData(params.data as string);
-
-      const [day, month, year] = (params.data as string).split('/').map(Number);
-      setSelectedDateObject(new Date(year, month - 1, day));
-    } else {
-      const today = new Date();
-      setData(getTodayDate());
-      setSelectedDateObject(today);
+      setTipoTransacao((params.tipo_transacao as TipoTransacao) || 'PIX');
+      setAcao((params.acao as Acao) || 'saida');
+      
+      if (params.data) {
+        setData(params.data as string);
+        const [day, month, year] = (params.data as string).split('/').map(Number);
+        setSelectedDateObject(new Date(year, month - 1, day));
+      }
     }
-  }, [params.id, getTodayDate]);
-
+  }, [params.id]);
 
   async function carregarCategorias() {
     try {
@@ -177,6 +178,7 @@ export default function Input() {
       console.error('Error loading categories:', error);
     }
   }
+
   async function carregarCaixas() {
     try {
       const resultado = await buscarTransacoes();
@@ -208,16 +210,9 @@ export default function Input() {
     setMostrarCaixaSugestao(true);
   }
 
-
   const handleValorChange = (text: string) => {
     const valorFormatado = formatarInput(text);
-    console.log('Formatted value:', valorFormatado);
     setValor(valorFormatado);
-  };
-
-  const handleQuantidadeChange = (text: string) => {
-    const numeros = text.replace(/\D/g, '');
-    setQuantidade(numeros);
   };
 
   const onDateChange = (event: any, selectedDate?: Date) => {
@@ -240,7 +235,6 @@ export default function Input() {
       }
 
       const valorNumerico = Number(valor.replace(/\D/g, ''));
-      console.log('Amount to be saved:', valorNumerico);
 
       const transacao = {
         descricao,
@@ -254,19 +248,16 @@ export default function Input() {
       };
 
       if (params.id) {
-        console.log('Updating transaction:', { id: params.id, ...transacao });
         await atualizarTransacao({
           id: Number(params.id),
           ...transacao
         });
       } else {
-        console.log('Saving new transaction:', transacao);
         await salvarTransacao(transacao);
       }
 
-      Alert.alert(t('return.success'), t('return.transaction_saved'));
       limparCampos();
-      router.replace('/input');
+      router.replace('/');
     } catch (error) {
       console.error('Error saving:', error);
       Alert.alert(t('return.error'), t('return.error_save_transaction'));
@@ -279,12 +270,18 @@ export default function Input() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 10}
     >
+      <Stack.Screen
+        options={{
+          headerTitle: params.id ? `${t('finance_tab.input')} ${t('action.editing')} #${params.id}` : t('finance_tab.input'),
+        }}
+      />
+
       <ScrollView
         style={styles.formContainer}
-        showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
+        showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.formContent}
         keyboardShouldPersistTaps="handled"
-      // Removendo nestedScrollEnabled aqui, pois o modal terá sua própria FlatList
       >
         <View style={styles.inputContainer}>
           <Text style={[styles.label, { color: colors.text }]}>{t('input_finance.description')}</Text>
@@ -296,7 +293,6 @@ export default function Input() {
           />
         </View>
 
-    
         <View style={styles.inputContainer}>
           <Text style={[styles.label, { color: colors.text }]}>{t('input_finance.wallet')}</Text>
           <View style={[
@@ -311,9 +307,6 @@ export default function Input() {
               editable={false}
               onChangeText={(text) => {
                 setCaixa(text);
-                // Você pode manter a filtragem de sugestões se quiser,
-                // mas as sugestões que aparecem abaixo do input serão menos úteis
-                // com o modal. Decidi remover o `onFocus` e `onBlur` aqui.
                 filtrarCaixas(text);
               }}
               placeholder={t('placeholder.wallet')}
@@ -321,7 +314,7 @@ export default function Input() {
               style={styles.inputInsideButtonContainer}
             />
             <TouchableOpacity
-              onPress={() => setShowCaixaModal(true)} // Abre o modal
+              onPress={() => setShowCaixaModal(true)}
               style={[styles.buttonOnRight, { width: 40, backgroundColor: colors.primary }]}
             >
               <AntDesign name="select" size={20} color="white" />
@@ -329,7 +322,6 @@ export default function Input() {
           </View>
         </View>
 
-      
         <View style={styles.inputContainer}>
           <Text style={[styles.label, { color: colors.text }]}>{t('input_finance.category')}</Text>
           <View style={[
@@ -351,7 +343,7 @@ export default function Input() {
               style={styles.inputInsideButtonContainer}
             />
             <TouchableOpacity
-              onPress={() => setShowCategoriaModal(true)} // Abre o modal
+              onPress={() => setShowCategoriaModal(true)}
               style={[styles.buttonOnRight, { width: 40, backgroundColor: colors.primary }]}
             >
               <AntDesign name="select" size={20} color="white" />
@@ -383,19 +375,33 @@ export default function Input() {
 
         <View style={styles.inputContainer}>
           <Text style={[styles.label, { color: colors.text }]}>{t('input_finance.type')}</Text>
-          <ThemedPicker
-            selectedValue={tipoTransacao}
-            onValueChange={(value) => setTipoTransacao(value as TipoTransacao)}
-          >
-            <ThemedPicker.Item label="PIX" value="PIX" />
-            <ThemedPicker.Item label="Dinheiro" value="Dinheiro" />
-            <ThemedPicker.Item label="Boleto" value="Boleto" />
-            <ThemedPicker.Item label="Débito" value="Débito" />
-            <ThemedPicker.Item label="Crédito" value="Crédito" />
-            <ThemedPicker.Item label="TED" value="TED" />
-            <ThemedPicker.Item label="DOC" value="DOC" />
-            <ThemedPicker.Item label="Distinto" value="Distinto" />
-          </ThemedPicker>
+          <View style={styles.chipGridContainer}>
+            {(['PIX', 'Dinheiro', 'Boleto', 'Distinto', 'Débito', 'Crédito', 'TED', 'DOC'] as TipoTransacao[]).map((tipo) => {
+              const isSelected = tipoTransacao === tipo;
+              return (
+                <TouchableOpacity
+                  key={tipo}
+                  onPress={() => setTipoTransacao(tipo)}
+                  style={[
+                    styles.chipButton,
+                    {
+                      backgroundColor: isSelected ? colors.primary : colors.inputBackground,
+                      borderColor: isSelected ? colors.primary : colors.borderColor,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.chipText,
+                      { color: isSelected ? '#FFFFFF' : colors.text, fontWeight: isSelected ? 'bold' : 'normal' },
+                    ]}
+                  >
+                    {tipo}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
 
         <View style={styles.inputContainer}>
@@ -411,7 +417,7 @@ export default function Input() {
         <View style={styles.inputContainer}>
           <Text style={[styles.label, { color: colors.text }]}>{t('input_finance.date')}</Text>
           <TouchableOpacity onPress={() => setShowDatePicker(true)} style={[styles.dateInputButton, { borderColor: colors.borderColor, backgroundColor: colors.inputBackground }]}>
-            <Text style={[styles.dateInputText, { color: data ? colors.text : colors.text, backgroundColor: colors.inputBackground }]}>
+            <Text style={[styles.dateInputText, { color: colors.text, backgroundColor: colors.inputBackground }]}>
               {data || "Selecionar Data"}
             </Text>
           </TouchableOpacity>
@@ -437,7 +443,6 @@ export default function Input() {
             color={colors.info}
           />
         </View>
-
       </ScrollView>
 
       <View style={[styles.separator, { backgroundColor: colors.borderColor }]} />
@@ -448,14 +453,14 @@ export default function Input() {
             title={t('button.cancel_edit')}
             onPress={() => {
               limparCampos();
-              router.replace('/input');
+              router.replace('/');
             }}
             color={colors.error}
           />
         )}
         <ButtonTT
           title={t('button.clean')}
-          onPress={() => limparCampos()}
+          onPress={limparApenasCamposFormulario}
           color={colors.info}
         />
         <ButtonTT
@@ -465,7 +470,6 @@ export default function Input() {
         />
       </View>
 
-     
       <Modal
         animationType="slide"
         transparent={true}
@@ -477,7 +481,7 @@ export default function Input() {
             <Text style={[styles.modalTitle, { color: colors.text }]}>{t('placeholder.wallet')}</Text>
             <ThemedInput
               placeholder={t('placeholder.wallet_create')}
-              value={caixa} // Usa o mesmo estado para a busca
+              value={caixa}
               onChangeText={(text) => {
                 setCaixa(text);
                 filtrarCaixas(text);
@@ -486,7 +490,7 @@ export default function Input() {
               placeholderTextColor={colors.text}
             />
             <FlatList
-              data={caixasFiltradas.length > 0 ? caixasFiltradas : caixas} // Mostra filtradas se houver, senão todas
+              data={caixasFiltradas.length > 0 ? caixasFiltradas : caixas}
               keyExtractor={(item) => item}
               renderItem={({ item }) => (
                 <TouchableOpacity
@@ -526,7 +530,7 @@ export default function Input() {
             <Text style={[styles.modalTitle, { color: colors.text }]}>{t('placeholder.category')}</Text>
             <ThemedInput
               placeholder={t('placeholder.category_create')}
-              value={categoria} // Usa o mesmo estado para a busca
+              value={categoria}
               onChangeText={(text) => {
                 setCategoria(text);
                 filtrarCategorias(text);
@@ -535,7 +539,7 @@ export default function Input() {
               placeholderTextColor={colors.text}
             />
             <FlatList
-              data={categoriasFiltradas.length > 0 ? categoriasFiltradas : categorias} // Mostra filtradas se houver, senão todas
+              data={categoriasFiltradas.length > 0 ? categoriasFiltradas : categorias}
               keyExtractor={(item) => item}
               renderItem={({ item }) => (
                 <TouchableOpacity
@@ -563,7 +567,7 @@ export default function Input() {
           </View>
         </View>
       </Modal>
-    </KeyboardAvoidingView >
+    </KeyboardAvoidingView>
   );
 }
 
@@ -605,7 +609,6 @@ const styles = StyleSheet.create({
   spacer: {
     width: 10,
   },
-  // Novos estilos para o input com botão lateral
   inputWithButtonContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -617,7 +620,7 @@ const styles = StyleSheet.create({
   },
   inputInsideButtonContainer: {
     flex: 1,
-    borderWidth: 0, // Remove a borda do ThemedInput interno
+    borderWidth: 0,
     minHeight: 60,
   },
   buttonOnRight: {
@@ -626,7 +629,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderLeftWidth: 0,
-    borderColor: '#ccc', // Uma borda sutil entre input e botão
+    borderColor: '#ccc',
   },
   dateInputButton: {
     borderWidth: 1,
@@ -638,12 +641,11 @@ const styles = StyleSheet.create({
   dateInputText: {
     fontSize: 16,
   },
-  // Estilos para o Modal
   centeredView: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)', // Fundo escurecido
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   modalView: {
     margin: 20,
@@ -658,8 +660,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 5,
-    width: '90%', // Largura do modal
-    maxHeight: '80%', // Altura máxima para caber na tela
+    width: '90%',
+    maxHeight: '80%',
     borderWidth: 1,
   },
   modalTitle: {
@@ -674,7 +676,7 @@ const styles = StyleSheet.create({
   },
   modalList: {
     width: '100%',
-    maxHeight: 300, // Altura máxima da lista no modal
+    maxHeight: 300,
     marginBottom: 20,
     borderWidth: 1,
     borderColor: '#ddd',
@@ -684,5 +686,25 @@ const styles = StyleSheet.create({
     padding: 15,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
+  },
+  chipGridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 5,
+  },
+  chipButton: {
+    flexGrow: 1,
+    minWidth: '22%',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  chipText: {
+    fontSize: 14,
+    textAlign: 'center',
   },
 });

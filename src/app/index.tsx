@@ -7,7 +7,7 @@ import ButtonTTAPP from '../components/Jhonatanrs/ButtonTTAPP';
 import { LinearGradient } from 'expo-linear-gradient';
 import Colors from '../constants/Colors';
 import { useColorScheme } from '../components/useColorScheme';
-import { useSafeAreaInsets } from 'react-native-safe-area-context'; // Importe useSafeAreaInsets
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 
 export default function HomeScreen() {
@@ -16,23 +16,26 @@ export default function HomeScreen() {
 
   const router = useRouter();
   const colorScheme = useColorScheme() ?? 'light';
-  const colors = Colors[colorScheme];
-  const insets = useSafeAreaInsets(); // Hook para obter as insets da área segura
+  const colors = Colors[colorScheme] ?? Colors.light;
+  const insets = useSafeAreaInsets();
+
+  // Garantia de cores válidas para evitar falha nativa no SDK 57
+  const gradientColor1 = colors?.grade1 ?? '#4c669f';
+  const gradientColor2 = colors?.grade2 ?? '#192f6a';
 
   return (
-    // O View principal ocupa toda a tela
     <View style={styles.container}>
+      {/* Container com posicionamento absoluto explícito */}
       <LinearGradient
-        colors={[colors.grade1, colors.grade2]} // Suas cores
+        colors={[gradientColor1, gradientColor2]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFillObject} // Isso faz o gradiente preencher o pai (container)
+        style={StyleSheet.absoluteFill}
       />
 
       <ScrollView
         contentContainerStyle={[
           styles.scrollViewContent,
-          // Ajuste o padding superior para respeitar a Status Bar e o notch
           { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20 }
         ]}
         style={styles.scrollView}
@@ -47,7 +50,7 @@ export default function HomeScreen() {
         <View style={styles.spacer} />
 
         <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', marginTop: 50 }}>
-          <Text style={{ color: "white", fontSize: 10, fontWeight: 'bold' }}>Copyright © 2026 JRSAPP. {t('copyright')}.</Text>
+          <Text style={{ color: "white", fontSize: 10, fontWeight: 'bold' }}>Copyright © {new Date().getFullYear()} JRSAPP. {t('copyright')}.</Text>
           <Text style={{ color: "white", fontSize: 8 }}>v{version} By Jhonatanrs</Text>
         </View>
 
@@ -60,17 +63,18 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1, // Faz com que o container ocupe 100% da altura e largura da tela
-    backgroundColor: 'transparent', // Para que o gradiente abaixo seja visível
+    flex: 1,
+    position: 'relative', // Garante a ancoragem do absoluteFill do gradiente
   },
   scrollView: {
-    flex: 1, // Faz o ScrollView ocupar todo o espaço disponível
+    flex: 1,
+    backgroundColor: 'transparent',
   },
   scrollViewContent: {
-    flexGrow: 1, // Permite que o conteúdo do ScrollView se expanda para preencher o espaço
-    justifyContent: 'center', // Centraliza o conteúdo verticalmente
-    alignItems: 'center',     // Centraliza o conteúdo horizontalmente
-    paddingHorizontal: 20, // Opcional: Adiciona padding lateral
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
   },
   spacer: {
     height: 20,

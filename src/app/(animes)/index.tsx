@@ -15,7 +15,7 @@ import { Text, View } from '../../components/Themed';
 import { ThemedInput } from '../../components/ThemedInput'; // Se não estiver em uso, pode remover
 import { ThemedPicker } from '../../components/ThemedPicker'; // Se não estiver em uso, pode remover
 import { buscarAnimes, deletarAnime } from '../../database/db';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from 'expo-router';
 import { useRouter } from 'expo-router';
 import Colors from '../../constants/Colors';
 import { useColorScheme } from '../../components/useColorScheme';
@@ -272,36 +272,33 @@ export default function MeusAnimes() {
   }, [router]); // Adicionado useCallback para estabilizar a função
 
 const abrirLink = useCallback((url: string | null) => {
-  if (url) {
-    // 1. Regex para encontrar o início de um link (http ou https)
-    // Ela procura por 'http' e ignora tudo o que estiver antes.
-    const match = url.match(/https?:\/\/[^\s]+/);
-    
-    let finalUrl = "";
-
-    if (match) {
-      // Se encontrou algo começando com http/https, pega apenas essa parte
-      finalUrl = match[0];
-    } else {
-      // 2. Se não encontrou http, mas existe texto, tenta limpar espaços e forçar https
-      const cleanUrl = url.trim();
-      if (cleanUrl) {
-        finalUrl = `https://${cleanUrl}`;
-      }
-    }
-
-    if (finalUrl) {
-      Linking.openURL(finalUrl).catch((err) =>
-        Alert.alert(t('return.error'), `${t('return.error_open_link')}: ${err.message}`)
-      );
-    } else {
-      Alert.alert(t('return.warning'), t('return.no_link'));
-    }
-  } else {
+  if (!url) {
     Alert.alert(t('return.warning'), t('return.no_link'));
+    return;
   }
-}, [t]); // Adicionado 't' como dependência para garantir tradução atualizada
 
+  // 1. Remove espaços em branco no início e no fim da string
+  const cleanInput = url.trim();
+
+  if (!cleanInput) {
+    Alert.alert(t('return.warning'), t('return.no_link'));
+    return;
+  }
+
+  // 2. Garante que a URL tenha o protocolo http ou https
+  let formattedUrl = cleanInput;
+  if (!/^https?:\/\//i.test(cleanInput)) {
+    formattedUrl = `https://${cleanInput}`;
+  }
+
+  // 3. Converte espaços e caracteres especiais em formato aceito por URLs (%20)
+  const finalUrl = encodeURI(formattedUrl);
+
+  // 4. Tenta abrir a URL formatada
+  Linking.openURL(finalUrl).catch((err) =>
+    Alert.alert(t('return.error'), `${t('return.error_open_link')}: ${err.message}`)
+  );
+}, [t]);
   const animesFiltrados = React.useMemo(() => {
     let lista = [...animes];
 

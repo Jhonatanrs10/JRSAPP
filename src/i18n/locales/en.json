@@ -202,7 +202,8 @@
   },
   "action": {
     "inflow": "Inflow",
-    "outflow": "Outflow"
+    "outflow": "Outflow",
+    "editing": "Editing"
   },
   "year": "Year",
   "month": "Month",

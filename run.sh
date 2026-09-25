@@ -14,10 +14,27 @@ npxcheckversions() {
 	sleep 3
 }
 
-install_expo() {
-	echo "MANUAL SETUP"
-	echo "No app Expo Go Android em Settings para a versão do SDK instalar o expo com:"
-	echo "npm install expo@~54.0.0 --legacy-peer-deps"
+update_sdk(){
+	rm -rf node_modules package-lock.json yarn.lock
+	npm install expo@~57.0.0 --legacy-peer-deps
+	npx expo install --fix
+	npx expo config
+	npx expo-doctor
+	npx expo start -c
+}
+
+local_build_req(){
+	sudo pacman -S jdk17-openjdk
+	sudo archlinux-java set java-17-openjdk
+	yay -S android-studio
+}
+
+remove_node_modules_folder(){
+	rm -rf node_modules package-lock.json
+}
+
+install_dependencies(){
+	npx expo install --fix
 }
 
 install_dependencies_old() {
@@ -45,7 +62,7 @@ install_dependencies_old() {
 	read -r
 }
 
-install_dependencies() {
+install_dependencies_old_2() {
 	echo ""
 	echo "Instalando dependências do Expo (SDK 54)..."
 
@@ -167,11 +184,12 @@ show_menu() {
 	echo "1. Rodar o Projeto (npx expo start)"
 	echo "2. Abrir Pasta no VS Code (code .)"
 	echo "-------------------------------------"
-	echo "3. Instalar Dependências (npx expo install)"
+	echo "3. Instalar Dependências (npx expo install --fix)"
 	echo "4. Verificar Saúde do Projeto (npx expo doctor)"
 	echo "5. Check versão das dependencias (npx expo install --check)"
+	echo "6. Update SDK (SDK 57)"
 	echo "-------------------------------------"
-	echo "6. Buildar APK (EAS Build)"
+	echo "7. Buildar APK (EAS Build)"
 	echo "-------------------------------------"
 	echo "0. Sair"
 	echo "-------------------------------------"
@@ -185,10 +203,11 @@ while true; do
 	case "$choice" in
 	1) run_project ;;
 	3) install_dependencies ;;
-	6) build_apk ;;
+	7) build_apk ;;
 	4) run_expo_doctor ;; # Chama a nova função
 	2) open_vscode ;;
 	5) npxcheckversions ;;
+	6) update_sdk;;
 	0)
 		echo ""
 		echo "Saindo. Até mais!"

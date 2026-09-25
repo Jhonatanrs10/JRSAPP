@@ -13,7 +13,7 @@ import {
   StatusBar
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from 'expo-router';
 import { useColorScheme } from '../../components/useColorScheme';
 
 // 1. Atualizando a Interface para aceitar as novas props

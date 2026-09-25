@@ -7,7 +7,7 @@ import CalculatorButtons from '../../components/Jhonatanrs/CalculatorButtons';
 import QuantitySelector from '../../components/Jhonatanrs/QuantitySelector'; // Keep this import
 import QuantidadeControl from '@/src/components/Jhonatanrs/QuantidadeControl'; // Assuming this is still needed, though not used in the provided snippet
 import ProductSelector from '../../components/Jhonatanrs/ProductSelector';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from 'expo-router';
 import Colors from '../../constants/Colors';
 import { useColorScheme } from '../../components/useColorScheme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';

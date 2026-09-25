@@ -14,7 +14,7 @@ import {
 import { Text, View } from '../../components/Themed';
 import { ThemedInput } from '../../components/ThemedInput';
 import { ThemedPicker } from '../../components/ThemedPicker';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, Stack, useFocusEffect } from 'expo-router';
 import Colors from '../../constants/Colors';
 import { useColorScheme } from '../../components/useColorScheme';
 import { salvarAnime, buscarAnimes, atualizarAnime } from '../../database/db';
@@ -85,52 +85,69 @@ export default function AnimesInput() {
     }
     setDynamicSeasonsData([]);
     setAnimeSendoEditado(null);
-    router.setParams({});
+    router.setParams({ id: undefined });
   }, [router]);
 
-  useEffect(() => {
-    if (params.id) {
-      const loadAnimeForEdit = async () => {
-        try {
-          const allAnimes = await buscarAnimes() as Anime[];
-          const foundAnime = allAnimes.find(a => a.id === Number(params.id));
-          if (foundAnime) {
-            setAnimeSendoEditado(foundAnime);
-            setNomeAnime(foundAnime.nome);
-            setStatus(foundAnime.status);
-            setReleaseDay(foundAnime.release_day);
-            setObservacao(foundAnime.observacao || '');
-            setLink(foundAnime.link || '');
-            if (foundAnime.seasons) {
-              try {
-                const parsedSeasons = JSON.parse(foundAnime.seasons);
-                if (dynamicInputRef.current && parsedSeasons instanceof Array) {
-                  dynamicInputRef.current.setInitialSeasons(parsedSeasons);
-                } else {
+// Limpa apenas o texto dos campos sem sair do modo de edição
+  const limparApenasCamposFormulario = () => {
+    setNomeAnime('');
+    setStatus('plan_to_watch');
+    setReleaseDay('monday');
+    setObservacao('');
+    setLink('');
+    if (dynamicInputRef.current) {
+      dynamicInputRef.current.clearAllSeasons();
+    }
+    setDynamicSeasonsData([]);
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      // Se tiver params.id, carrega os dados para edição
+      if (params.id) {
+        const loadAnimeForEdit = async () => {
+          try {
+            const allAnimes = (await buscarAnimes()) as Anime[];
+            const foundAnime = allAnimes.find((a) => a.id === Number(params.id));
+            if (foundAnime) {
+              setAnimeSendoEditado(foundAnime);
+              setNomeAnime(foundAnime.nome);
+              setStatus(foundAnime.status);
+              setReleaseDay(foundAnime.release_day);
+              setObservacao(foundAnime.observacao || '');
+              setLink(foundAnime.link || '');
+              if (foundAnime.seasons) {
+                try {
+                  const parsedSeasons = JSON.parse(foundAnime.seasons);
+                  if (dynamicInputRef.current && parsedSeasons instanceof Array) {
+                    dynamicInputRef.current.setInitialSeasons(parsedSeasons);
+                  } else {
+                    setDynamicSeasonsData([]);
+                  }
+                } catch (e) {
+                  console.error('Error when analyzing seasons:', e);
                   setDynamicSeasonsData([]);
                 }
-              } catch (e) {
-                console.error("Error when analyzing seasons:", e);
+              } else {
                 setDynamicSeasonsData([]);
               }
             } else {
-              setDynamicSeasonsData([]);
+              Alert.alert(t('return.error'), t('return.error_edit_anime'));
+              limparCampos();
             }
-          } else {
-            Alert.alert(t('return.error'), t('return.error_edit_anime'));
+          } catch (error) {
+            console.error('Error loading anime for editing:', error);
+            Alert.alert(t('return.error'), t('return.error_load_anime'));
             limparCampos();
           }
-        } catch (error) {
-          console.error('Error loading anime for editing:', error);
-          Alert.alert(t('return.error'), t('return.error_load_anime'));
-          limparCampos();
-        }
-      };
-      loadAnimeForEdit();
-    } else {
-      limparCampos();
-    }
-  }, [params.id, limparCampos]);
+        };
+        loadAnimeForEdit();
+      } else {
+        // Se entrou na tela SEM params.id (ex: clicou na aba/botão de Novo Anime), limpa tudo
+        limparCampos();
+      }
+    }, [params.id])
+  );
 
   async function salvarOuAtualizarAnime() {
     if (!nomeAnime || !status) {
@@ -154,34 +171,45 @@ export default function AnimesInput() {
 
       if (animeSendoEditado) {
         await atualizarAnime({ ...dadosAnime, id: animeSendoEditado.id } as Anime);
-        Alert.alert(t('return.success'), t('return.anime_update'));
+        //Alert.alert(t('return.success'), t('return.anime_update'));
       } else {
         await salvarAnime(dadosAnime);
-        Alert.alert(t('return.success'), t('return.anime_save'));
+        //Alert.alert(t('return.success'), t('return.anime_save'));
       }
 
       limparCampos();
-      router.replace('/input');
+      router.replace('/');
     } catch (error) {
       console.error('Error saving/updating anime:', error);
       Alert.alert(t('return.error'), t('return.error_save_edit'));
     }
   }
 
-  const handlePasteLink = async () => {
-    try {
-      const clipboardContent = await Clipboard.getStringAsync();
-      if (clipboardContent) {
-        setLink(clipboardContent);
+const handlePasteLink = async () => {
+  try {
+    const clipboardContent = await Clipboard.getStringAsync();
+
+    if (clipboardContent) {
+      // Procura por 'http://' ou 'https://' e pega tudo a partir daí
+      const match = clipboardContent.match(/https?:\/\/.*/i);
+
+      if (match) {
+        // match[0] contém o link extraído (removendo qualquer texto anterior)
+        const extractedLink = match[0].trim();
+        setLink(extractedLink);
         Alert.alert(t('return.success'), t('return.paste_from_cb'));
       } else {
-        Alert.alert(t('return.warning'), t('return.cb_empty'));
+        // Se houver texto, mas nenhum link válido com http/https
+        Alert.alert(t('return.warning'), t('return.no_link')); 
       }
-    } catch (error) {
-      console.error('Error pasting from clipboard:', error);
-      Alert.alert(t('return.error'), t('return.error_paste_link'));
+    } else {
+      Alert.alert(t('return.warning'), t('return.cb_empty'));
     }
-  };
+  } catch (error) {
+    console.error('Error pasting from clipboard:', error);
+    Alert.alert(t('return.error'), t('return.error_paste_link'));
+  }
+};
 
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
 
@@ -212,7 +240,11 @@ export default function AnimesInput() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 10} // Este pode ser ajustado para um valor, ex: Header height
     >
-
+      <Stack.Screen
+  options={{
+    headerTitle: params.id ? `${t('anime_tab.input')} ${t('action.editing')} #${params.id}` : t('anime_tab.input'),
+  }}
+/>
       <ScrollView
         style={styles.formContainer}
         contentContainerStyle={styles.formContent}
@@ -309,8 +341,8 @@ export default function AnimesInput() {
           <ButtonTT
             title={t('button.cancel_edit')}
             onPress={() => {
-              limparCampos();
-              router.replace('/input');
+              limparCampos(); // Cancela a edição, remove o ID e volta pra index
+              router.replace('/');
             }}
             color={colors.error}
           />
@@ -318,9 +350,10 @@ export default function AnimesInput() {
 
         <ButtonTT
           title={t('button.clean')}
-          onPress={() => limparCampos()}
+          onPress={limparApenasCamposFormulario} // Limpa somente o texto dos campos
           color={colors.info}
         />
+
         <ButtonTT
           title={params.id ? t('button.save_edit') : t('button.save')}
           onPress={salvarOuAtualizarAnime}

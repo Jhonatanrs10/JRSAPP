@@ -9,7 +9,7 @@ import * as Sharing from 'expo-sharing';
 import { salvarAnime, buscarAnimes, recriarTabelaAnimes } from '../../database/db';
 import Colors from '../../constants/Colors';
 import { useColorScheme } from '../../components/useColorScheme';
-import { useFocusEffect } from '@react-navigation/native'; // Para recarregar dados ao focar na tela
+import { useFocusEffect } from 'expo-router'; // Para recarregar dados ao focar na tela
 
 type StatusAnime = 'watching' | 'completed' | 'plan_to_watch';
 type ReleaseDay = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';

@@ -65,7 +65,7 @@ export function formatarData(dataParam: Date | string): string {
 
 // 1. Usando com um objeto Date (para a data atual)
 const dataAtual = new Date();
-console.log(`Data atual formatada: ${formatarData(dataAtual)}`); // Ex: "10/06/2025"
+//console.log(`Data atual formatada: ${formatarData(dataAtual)}`); // Ex: "10/06/2025"
 
 // 2. Usando com a string ISO (APENAS SE QUISER USAR A STRING ISO)
 // ATENÇÃO: Se a intenção é formatar new Date().toISOString(), o ideal é passar o objeto Date

@@ -4,7 +4,7 @@ import { Button, Alert, ScrollView, StyleSheet, TextInput, FlatList } from 'reac
 import { Text, View } from '../../components/Themed';
 import { buscarTransacoes, deletarTransacao } from '../../database/db';
 import { formatarMoeda } from '../../utils/formatacao';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from 'expo-router';
 import { useRouter } from 'expo-router';
 import Colors from '../../constants/Colors';
 import { useColorScheme } from '../../components/useColorScheme';

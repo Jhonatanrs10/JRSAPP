@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Pressable, FlatList, StyleSheet, Alert } from 'react-native';
 import { Text, View } from '../../components/Themed';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from 'expo-router';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';

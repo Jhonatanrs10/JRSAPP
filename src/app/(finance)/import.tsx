@@ -12,7 +12,7 @@ import { formatarData } from '../../utils/formatacao';
 import Colors from '../../constants/Colors';
 import { useColorScheme } from '../../components/useColorScheme';
 import DateTimePicker from '@react-native-community/datetimepicker'; // Import for date picker
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from 'expo-router';
 
 type TipoTransacao = 'PIX' | 'Dinheiro' | 'Boleto' | 'Débito' | 'Crédito' | 'TED' | 'DOC' | 'Distinto';
 type Acao = 'entrada' | 'saida';
