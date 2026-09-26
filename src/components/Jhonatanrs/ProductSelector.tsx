@@ -9,18 +9,15 @@ import {
   Alert,
   TextInput as RNTextInput,
   KeyboardAvoidingView,
-  Platform,
-  StatusBar
+  Platform
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from 'expo-router';
 import { useColorScheme } from '../../components/useColorScheme';
 
-// 1. Atualizando a Interface para aceitar as novas props
 interface ProductSelectorProps {
   selectedProduct: string;
   onSelect: (product: string) => void;
-  // Novas props de texto
   titleText?: string;
   placeholderText?: string;
   closeText?: string;
@@ -30,7 +27,7 @@ interface ProductSelectorProps {
 export default function ProductSelector({
   selectedProduct,
   onSelect,
-  titleText = "Buscar ou Adicionar", // Valores padrão (fallback)
+  titleText = "Buscar ou Adicionar",
   placeholderText = "Nome do produto...",
   closeText = "Fechar",
   addText = "+ Adicionar"
@@ -51,12 +48,13 @@ export default function ProductSelector({
     itemBorder: colorScheme === 'dark' ? '#333' : '#eee',
   };
 
+  const loadProducts = async () => {
+    const saved = await AsyncStorage.getItem('products');
+    if (saved) setProducts(JSON.parse(saved));
+  };
+
   useFocusEffect(
     React.useCallback(() => {
-      const loadProducts = async () => {
-        const saved = await AsyncStorage.getItem('products');
-        if (saved) setProducts(JSON.parse(saved));
-      };
       loadProducts();
     }, [])
   );
@@ -88,8 +86,30 @@ export default function ProductSelector({
       onSelect(newName);
       closeModalAndClearSearch();
     } catch (error) {
-      Alert.alert('Error', 'The product could not be saved.');
+      // Trata erros de gravação se necessário
     }
+  };
+
+  const removeProduct = (productName: string) => {
+    Alert.alert(
+      'Remover item',
+      `Deseja remover "${productName}" da lista de sugestões?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Excluir',
+          style: 'destructive',
+          onPress: async () => {
+            const updatedProducts = products.filter((p) => p !== productName);
+            await AsyncStorage.setItem('products', JSON.stringify(updatedProducts));
+            setProducts(updatedProducts);
+            if (selectedProduct === productName) {
+              onSelect('');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const closeModalAndClearSearch = () => {
@@ -114,10 +134,9 @@ export default function ProductSelector({
         animationType="slide"
         onShow={() => setIsRendered(true)}
       >
-        {/* O KeyboardAvoidingView deve ser o primeiro filho do Modal */}
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={{ flex: 1, backgroundColor: colors.background }} // Fundo aplicado aqui
+          style={{ flex: 1, backgroundColor: colors.background }}
         >
           <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>{titleText}</Text>
@@ -127,15 +146,25 @@ export default function ProductSelector({
               keyExtractor={(item) => item}
               keyboardShouldPersistTaps="always"
               renderItem={({ item }) => (
-                <TouchableOpacity
-                  onPress={() => {
-                    onSelect(item);
-                    closeModalAndClearSearch();
-                  }}
-                  style={[styles.productItem, { borderBottomColor: colors.itemBorder }]}
-                >
-                  <Text style={[styles.productText, { color: colors.text }]}>{item}</Text>
-                </TouchableOpacity>
+                <View style={[styles.productItem, { borderBottomColor: colors.itemBorder }]}>
+                  <TouchableOpacity
+                    style={{ flex: 1 }}
+                    onPress={() => {
+                      onSelect(item);
+                      closeModalAndClearSearch();
+                    }}
+                    onLongPress={() => removeProduct(item)}
+                  >
+                    <Text style={[styles.productText, { color: colors.text }]}>{item}</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => removeProduct(item)}
+                    style={styles.removeButtonContainer}
+                  >
+                    <Text style={styles.removeButtonText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
               )}
             />
 
@@ -152,7 +181,6 @@ export default function ProductSelector({
             {isRendered && (
               <RNTextInput
                 ref={inputRef}
-                // 5. Usando a prop placeholderText
                 placeholder={placeholderText}
                 placeholderTextColor="#888"
                 value={searchText}
@@ -179,8 +207,24 @@ const styles = StyleSheet.create({
   searchInput: { padding: 15, borderRadius: 10, fontSize: 22, height: 70, marginTop: 5 },
   addNewButton: { backgroundColor: '#28a745', padding: 15, borderRadius: 10, marginVertical: 5, alignItems: 'center' },
   addNewText: { color: 'white', fontSize: 20, fontWeight: 'bold' },
-  productItem: { paddingVertical: 18, borderBottomWidth: 1 },
-  productText: { fontSize: 22 },
+  productItem: {
+    paddingVertical: 14,
+    borderWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginVertical: 5
+  },
+  productText: { fontSize: 22, marginStart: 10 },
+  removeButtonContainer: {
+    paddingHorizontal: 15,
+    paddingVertical: 5,
+  },
+  removeButtonText: {
+    color: '#FF3B30',
+    fontSize: 22,
+    fontWeight: 'bold',
+  },
   cancelButton: { backgroundColor: '#FF3B30', padding: 15, borderRadius: 10, marginVertical: 5 },
   cancelText: { color: 'white', textAlign: 'center', fontSize: 20, fontWeight: 'bold' },
 });

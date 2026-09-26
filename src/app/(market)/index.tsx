@@ -1,13 +1,12 @@
 import { useTranslation } from 'react-i18next';
 import React, { useCallback, useState } from 'react';
-import { FlatList, StyleSheet, Pressable, Alert } from 'react-native';
+import { Alert, FlatList, StyleSheet, TextInput } from 'react-native';
 import { Text, View } from '../../components/Themed';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from 'expo-router';
-import * as FileSystem from 'expo-file-system/legacy';
-import * as Sharing from 'expo-sharing';
 import Colors from '../../constants/Colors';
 import { useColorScheme } from '../../components/useColorScheme';
+import ButtonTT from '../../components/Jhonatanrs/ButtonTT';
 
 type HistoryItem = {
   product: string;
@@ -15,9 +14,10 @@ type HistoryItem = {
   quantity: number;
 };
 
-export default function TwoScreen() {
+export default function MarketHistoryScreen() {
   const { t } = useTranslation();
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [busca, setBusca] = useState('');
 
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
@@ -26,45 +26,36 @@ export default function TwoScreen() {
     const stored = await AsyncStorage.getItem('history');
     if (stored) {
       setHistory(JSON.parse(stored));
+    } else {
+      setHistory([]);
     }
   };
 
-  const clearHistory = async () => {
-    Alert.alert(
-      t('return.clear_history'),
-      t('return.clear_history_msg'),
-      [
-        { text: t('button.cancel'), style: "cancel" },
-        {
-          text: t('button.clean'),
-          style: "destructive",
-          onPress: async () => {
-            // Sua lógica de limpar entra aqui
-            await AsyncStorage.removeItem('history');
-            setHistory([]);
-          }
-        }
-      ]
-    );
-  };
-
-  const deleteItem = async (visualIndex: number) => {
+  const deleteItem = (itemToDelete: HistoryItem) => {
     Alert.alert(
       t('return.remove_item'),
       t('return.remove_item_msg'),
       [
-        { text: t('button.cancel'), style: "cancel" },
+        { text: t('button.cancel'), style: 'cancel' },
         {
           text: t('button.delete'),
+          style: 'destructive',
           onPress: async () => {
-            // Sua lógica original aqui
-            const realIndex = history.length - 1 - visualIndex;
-            const newHistory = [...history];
-            newHistory.splice(realIndex, 1);
-            setHistory(newHistory);
-            await AsyncStorage.setItem('history', JSON.stringify(newHistory));
-          }
-        }
+            const realIndex = history.findIndex(
+              (item) =>
+                item.product === itemToDelete.product &&
+                item.unitValue === itemToDelete.unitValue &&
+                item.quantity === itemToDelete.quantity
+            );
+
+            if (realIndex !== -1) {
+              const newHistory = [...history];
+              newHistory.splice(realIndex, 1);
+              setHistory(newHistory);
+              await AsyncStorage.setItem('history', JSON.stringify(newHistory));
+            }
+          },
+        },
       ]
     );
   };
@@ -75,133 +66,216 @@ export default function TwoScreen() {
     }, [])
   );
 
-  const exportHistory = async () => {
-    if (history.length === 0) return;
+  const historyReversed = [...history].reverse();
+  const historyFiltrado = historyReversed.filter((item) =>
+    item.product.toLowerCase().includes(busca.toLowerCase())
+  );
 
-    const content = history
-      .map((item) => {
-        const total = item.unitValue * item.quantity;
-        const formatted = `${item.product} ${item.quantity}x ${item.unitValue.toLocaleString('pt-BR', {
-          style: 'currency',
-          currency: 'BRL',
-        })} (${total.toLocaleString('pt-BR', {
-          style: 'currency',
-          currency: 'BRL',
-        })})`;
-        return formatted;
-      })
-      .join('\n');
+  const renderItem = ({ item }: { item: HistoryItem }) => {
+    const totalItem = item.unitValue * item.quantity;
 
-    const fileUri = FileSystem.documentDirectory + 'history.txt';
+    return (
+      <View
+        style={[
+          styles.transacaoContainer,
+          {
+            backgroundColor: colors.inputBackground,
+            borderColor: colors.borderColor,
+            borderWidth: 1,
+            shadowColor: colors.text,
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 4,
+            elevation: 3,
+          }
+        ]}
+      >
+        <View style={[styles.transacaoHeader, { backgroundColor: colors.inputBackground }]}>
+          <View style={[styles.transacaoInfoPrincipal, { backgroundColor: colors.inputBackground }]}>
+            <Text style={[styles.transacaoDescricao, { color: colors.text }]}>
+              {item.product}
+            </Text>
+          </View>
+          <Text
+            style={[
+              styles.transacaoValor,
+              {
+                color: colors.success,
+                backgroundColor: `${colors.success}20`,
+                paddingHorizontal: 10,
+                paddingVertical: 5,
+                borderRadius: 8,
+                overflow: 'hidden',
+              }
+            ]}
+          >
+            {totalItem.toLocaleString('pt-BR', {
+              style: 'currency',
+              currency: 'BRL',
+            })}
+          </Text>
+        </View>
 
-    try {
-      await FileSystem.writeAsStringAsync(fileUri, content, {
-        encoding: FileSystem.EncodingType.UTF8,
-      });
+        <View
+          style={[
+            styles.transacaoDetalhes,
+            { borderTopColor: colors.borderColor, backgroundColor: colors.inputBackground }
+          ]}
+        >
+          <View style={[styles.detalheItem, { backgroundColor: colors.inputBackground }]}>
+            <Text style={[styles.detalheLabel, { color: colors.text }]}>
+              {t('item_market.quantity')}:
+            </Text>
+            <Text style={[styles.detalheValor, { color: colors.text }]}>
+              {item.quantity}
+            </Text>
+          </View>
 
-      await Sharing.shareAsync(fileUri);
-    } catch (error) {
-      console.error('Erro ao exportar:', error);
-    }
-  };
-
-
-
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{t('input_market.history')}</Text>
-
-      <FlatList
-        data={[...history].reverse()} // <- apenas inverte visualmente
-        keyExtractor={(_, index) => index.toString()}
-        renderItem={({ item, index }) => (
-          <View style={[styles.itemContainer, { backgroundColor: colors.inputBackground }]}>
-            <Text style={styles.item}>
-              {item.product} - {item.quantity} x{' '}
+          <View style={[styles.detalheItem, { backgroundColor: colors.inputBackground }]}>
+            <Text style={[styles.detalheLabel, { color: colors.text }]}>
+              {t('item_market.value')}:
+            </Text>
+            <Text style={[styles.detalheValor, { color: colors.text }]}>
               {item.unitValue.toLocaleString('pt-BR', {
                 style: 'currency',
                 currency: 'BRL',
-              })}{' '}
-              (
-              {(item.unitValue * item.quantity).toLocaleString('pt-BR', {
-                style: 'currency',
-                currency: 'BRL',
               })}
-              )
             </Text>
-
-            <Pressable onPress={() => deleteItem(index)} style={styles.deleteButton}>
-              <Text style={styles.deleteButtonText}>{t('button.delete')}</Text>
-            </Pressable>
           </View>
-        )}
-      />
+        </View>
 
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-        <Pressable onLongPress={clearHistory} style={[styles.clearButton, { flex: 1, marginRight: 5, backgroundColor: colors.error }]}>
-          <Text style={styles.clearButtonText}>{t('button.clean')}</Text>
-        </Pressable>
+        <View
+          style={[
+            styles.transacaoAcoes,
+            { borderTopColor: colors.borderColor, backgroundColor: colors.inputBackground }
+          ]}
+        >
+          <ButtonTT
+            title="X"
+            onPress={() => deleteItem(item)}
+            color="error"
+          />
+        </View>
+      </View>
+    );
+  };
 
-        <Pressable onPress={exportHistory} style={[styles.exportButton, { flex: 1, marginLeft: 5, backgroundColor: colors.success }]}>
-          <Text style={styles.clearButtonText}>{t('button.export') + " TXT"}</Text>
-        </Pressable>
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View
+        style={[
+          styles.buscaContainer,
+          { borderColor: colors.tabIconDefault, backgroundColor: colors.inputBackground }
+        ]}
+      >
+        <TextInput
+          style={[
+            styles.buscaInput,
+            {
+              color: colors.text,
+              backgroundColor: colors.background,
+              borderColor: colors.borderColor,
+            }
+          ]}
+          placeholder={t('placeholder.search_products')}
+          placeholderTextColor={'gray'}
+          value={busca}
+          onChangeText={setBusca}
+        />
       </View>
 
+      <FlatList
+        data={historyFiltrado}
+        renderItem={renderItem}
+        keyExtractor={(_, index) => index.toString()}
+        style={styles.flatList}
+        contentContainerStyle={styles.flatListContent}
+        showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
+      />
     </View>
   );
 }
 
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    padding: 0,
+  },
+  buscaContainer: {
+    marginTop: 10,
+    borderRadius: 12,
+    borderTopWidth: 0,
+    borderBottomWidth: 0,
+    padding: 10,
+    margin: 10,
+    marginBottom: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  buscaInput: {
+    height: 50,
+    paddingHorizontal: 15,
+    borderRadius: 8,
+    borderWidth: 1,
+    fontSize: 16,
+  },
+  flatList: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  flatListContent: {
+    paddingTop: 15,
+    paddingBottom: 20,
+  },
+  transacaoContainer: {
+    borderRadius: 12,
+    marginBottom: 25,
+    overflow: 'hidden',
+  },
+  transacaoHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     padding: 15,
-    paddingTop: 10,
   },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 20,
+  transacaoInfoPrincipal: {
+    flex: 1,
+    marginRight: 10,
   },
-  itemContainer: {
-    marginVertical: 6,
-    padding: 10,
-    borderRadius: 8,
-    borderColor: '#1c1c1e',
-    borderWidth: 0,
-  },
-  item: {
+  transacaoDescricao: {
     fontSize: 18,
-    marginBottom: 6,
+    fontWeight: 'bold',
+    marginBottom: 4,
   },
-  clearButton: {
-    backgroundColor: '#FF3B30',
-    padding: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  clearButtonText: {
-    color: 'white',
+  transacaoValor: {
+    fontSize: 18,
     fontWeight: 'bold',
   },
-  deleteButton: {
-    backgroundColor: '#FF9500',
-    padding: 6,
-    borderRadius: 6,
-    alignSelf: 'flex-end',
+  transacaoDetalhes: {
+    padding: 15,
+    borderTopWidth: 1,
   },
-  deleteButtonText: {
-    color: 'white',
+  detalheItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  detalheLabel: {
     fontSize: 14,
+    opacity: 0.8,
   },
-  exportButton: {
-    backgroundColor: '#34C759',
-    padding: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginBottom: 20
+  detalheValor: {
+    fontSize: 14,
+    fontWeight: 'bold',
   },
-
+  transacaoAcoes: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    padding: 15,
+    borderTopWidth: 1,
+  },
 });

@@ -47,7 +47,7 @@ export default function Input() {
   const router = useRouter();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
-
+  
   const [descricao, setDescricao] = useState('');
   const [caixa, setCaixa] = useState('');
   const [categoria, setCategoria] = useState('');
@@ -160,7 +160,7 @@ export default function Input() {
 
       setTipoTransacao((params.tipo_transacao as TipoTransacao) || 'PIX');
       setAcao((params.acao as Acao) || 'saida');
-      
+
       if (params.data) {
         setData(params.data as string);
         const [day, month, year] = (params.data as string).split('/').map(Number);
@@ -352,17 +352,6 @@ export default function Input() {
         </View>
 
         <View style={styles.inputContainer}>
-          <Text style={[styles.label, { color: colors.text }]}>{t('input_finance.quantity')}</Text>
-          <QuantityInput
-            value={quantidade}
-            onIncrement={handleIncrement}
-            onDecrement={handleDecrement}
-            onIncrement2={handleIncrement2}
-            onDecrement2={handleDecrement2}
-          />
-        </View>
-
-        <View style={styles.inputContainer}>
           <Text style={[styles.label, { color: colors.text }]}>{t('input_finance.value')}</Text>
           <ThemedInput
             value={valor}
@@ -370,6 +359,17 @@ export default function Input() {
             keyboardType="numeric"
             placeholder="R$ 0,00"
             placeholderTextColor={colors.text}
+          />
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Text style={[styles.label, { color: colors.text }]}>{t('input_finance.quantity')}</Text>
+          <QuantityInput
+            value={quantidade}
+            onIncrement={handleIncrement}
+            onDecrement={handleDecrement}
+            onIncrement2={handleIncrement2}
+            onDecrement2={handleDecrement2}
           />
         </View>
 
@@ -410,17 +410,36 @@ export default function Input() {
             options={acaoOptions}
             selectedValue={acao}
             onValueChange={setAcao}
+            style={styles.typeButton}
             activeColor={getStatusColor()}
           />
         </View>
 
         <View style={styles.inputContainer}>
           <Text style={[styles.label, { color: colors.text }]}>{t('input_finance.date')}</Text>
-          <TouchableOpacity onPress={() => setShowDatePicker(true)} style={[styles.dateInputButton, { borderColor: colors.borderColor, backgroundColor: colors.inputBackground }]}>
-            <Text style={[styles.dateInputText, { color: colors.text, backgroundColor: colors.inputBackground }]}>
-              {data || "Selecionar Data"}
-            </Text>
-          </TouchableOpacity>
+
+          <View style={[styles.combinedDateContainer, { borderColor: colors.borderColor, backgroundColor: colors.inputBackground }]}>
+
+            <TouchableOpacity
+              onPress={() => setShowDatePicker(true)}
+              style={styles.dateInputButtonFlex}
+            >
+              <Text style={[styles.dateInputText, { color: colors.text }]}>
+                {data || "Selecionar Data"}
+              </Text>
+            </TouchableOpacity>
+
+            <ButtonTT
+              buttonStyle={styles.inlineButton}
+              title={t('button.today')}
+              onPress={() => {
+                const today = new Date();
+                setData(getTodayDate());
+                setSelectedDateObject(today);
+              }}
+              color={colors.info}
+            />
+          </View>
 
           {showDatePicker && (
             <DateTimePicker
@@ -428,20 +447,9 @@ export default function Input() {
               value={selectedDateObject}
               mode="date"
               display="default"
-              onChange={onDateChange}
+              onValueChange={onDateChange}
             />
           )}
-
-          <ButtonTT
-            buttonStyle={{ marginTop: 10 }}
-            title={t('button.today')}
-            onPress={() => {
-              const today = new Date();
-              setData(getTodayDate());
-              setSelectedDateObject(today);
-            }}
-            color={colors.info}
-          />
         </View>
       </ScrollView>
 
@@ -632,8 +640,8 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
   },
   dateInputButton: {
-    borderWidth: 1,
-    borderRadius: 8,
+    borderWidth: 0,
+    borderRadius: 0,
     padding: 15,
     minHeight: 60,
     justifyContent: 'center',
@@ -690,21 +698,45 @@ const styles = StyleSheet.create({
   chipGridContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 5,
     marginTop: 5,
   },
   chipButton: {
     flexGrow: 1,
     minWidth: '22%',
     paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 10,
-    borderWidth: 1,
+    paddingHorizontal: 12,
+    borderRadius: 0,
+    borderWidth: 0,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  typeButton: {
+    borderWidth: 0,
   },
   chipText: {
     fontSize: 14,
     textAlign: 'center',
   },
+  combinedDateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 0,
+    borderRadius: 0,
+    overflow: 'hidden',
+    height: 60, // Mantém a altura fixa padronizada
+  },
+  dateInputButtonFlex: {
+    flex: 1,
+    paddingHorizontal: 15,
+    justifyContent: 'center',
+  },
+  inlineButton: {
+    height: '100%', // Faz o botão preencher exatamente a altura do input
+    paddingHorizontal: 20,
+    borderRadius: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 0,
+  }
 });

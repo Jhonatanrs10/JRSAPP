@@ -60,6 +60,10 @@
     "type": "Tipo de Transação",
     "date": "Data"
   },
+  "item_market": {
+    "quantity": "Quantidade",
+    "value": "Valor"
+  },
   "return": {
     "success": "Sucesso",
     "none": "Nenhum",
@@ -190,6 +194,7 @@
   "placeholder": {
     "search_animes": "Pesquisar animes...",
     "search_transactions": "Pesquisar transações...",
+    "search_products": "Pesquisar produtos...",
     "name": "Digite o nome...",
     "about": "Sobre o anime...",
     "link": "(ex: crunchyroll.com/anime)",
@@ -232,5 +237,29 @@
     "november_ab": "Nov",
     "december": "Dezembro",
     "december_ab": "Dez"
+  },
+  "pdf":{
+    "error-perm": "Não foi possível gerar o relatório PDF. Verifique se você tem permissão para arquivos ou se o conteúdo não é muito grande."
+  },
+  "linkModal": {
+    "button01": "Guia de Temporada",
+    "title": "Configurar Link",
+    "placeholder": "https://...",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "alerts": {
+      "noLinkTitle": "Nenhum Link",
+      "noLinkMessage": "Mantenha o botão pressionado para colar e guardar um link.",
+      "errorTitle": "Erro",
+      "cannotOpenUrl": "Não é possível abrir o URL: {{url}}",
+      "openUrlError": "Ocorreu um erro ao tentar abrir o link.",
+      "warningTitle": "Aviso",
+      "noValidUrlClipboard": "Nenhum link válido encontrado na área de transferência.",
+      "emptyClipboard": "A área de transferência está vazia.",
+      "pasteError": "Não foi possível colar da área de transferência.",
+      "successTitle": "Sucesso",
+      "linkSaved": "Link salvo!",
+      "saveError": "Não foi possível salvar o link."
+    }
   }
 }

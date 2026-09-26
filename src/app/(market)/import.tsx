@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import React, { useState } from 'react';
-import { Pressable, FlatList, StyleSheet, Alert } from 'react-native';
-import { Text, View } from '../../components/Themed';
+import { Pressable, StyleSheet, Alert, ScrollView } from 'react-native';
+import { Text, View } from '../../components/Themed'; // <- Certifique-se de importar daqui
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from 'expo-router';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -10,6 +10,12 @@ import * as DocumentPicker from 'expo-document-picker';
 import Colors from '../../constants/Colors';
 import { useColorScheme } from '../../components/useColorScheme';
 
+type HistoryItem = {
+  product: string;
+  unitValue: number;
+  quantity: number;
+};
+
 export default function ProductsScreen() {
   const { t } = useTranslation();
   const [products, setProducts] = useState<string[]>([]);
@@ -17,7 +23,6 @@ export default function ProductsScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
 
-  // Carrega a lista sempre que a tela ganha foco
   const loadProducts = async () => {
     const saved = await AsyncStorage.getItem('products');
     if (saved) setProducts(JSON.parse(saved));
@@ -27,30 +32,6 @@ export default function ProductsScreen() {
     setProducts(newProducts);
     await AsyncStorage.setItem('products', JSON.stringify(newProducts));
   };
-
-  const removeProductAtIndex = (visualIndex: number) => {
-  Alert.alert(
-    t('return.remove_item'), // Título
-    t('return.remove_item_msg'), // Mensagem
-    [
-      {
-        text: t('button.cancel'),
-        style: "cancel"
-      },
-      {
-        text: t('button.delete'),
-        style: "destructive",
-        onPress: () => {
-          // Sua lógica original de cálculo de índice e salvamento
-          const realIndex = products.length - 1 - visualIndex;
-          const updated = [...products];
-          updated.splice(realIndex, 1);
-          saveProducts(updated);
-        }
-      }
-    ]
-  );
-};
 
   useFocusEffect(
     React.useCallback(() => {
@@ -117,7 +98,6 @@ export default function ProductsScreen() {
       const saved = await AsyncStorage.getItem('products');
       const current = saved ? JSON.parse(saved) : [];
 
-      // Remove duplicatas usando Set
       const updated = [...new Set([...current, ...newItems])];
 
       await saveProducts(updated);
@@ -128,76 +108,140 @@ export default function ProductsScreen() {
     }
   };
 
-  return (
-    <View style={{ flex: 1, padding: 20 }}>
-
-      <FlatList
-        data={[...products].reverse()} 
-        keyExtractor={(_, index) => index.toString()}
-        renderItem={({ item, index }) => (
-          <View style={[styles.productRow, { borderBottomColor: colors.tabIconDefault + '33' }]}>
-            <Text style={[styles.item, { color: colors.text }]}>{item}</Text>
-            <Pressable onPress={() => removeProductAtIndex(index)}>
-              <Text style={styles.remove}>✕</Text>
-            </Pressable>
-          </View>
-        )}
-        ListEmptyComponent={
-          <Text style={{ textAlign: 'center', marginTop: 20, color: '#888' }}>
-            {t('return.none')}
-          </Text>
+  const clearMarketHistory = async () => {
+    Alert.alert(
+      t('return.clear_history'),
+      t('return.clear_history_msg'),
+      [
+        { text: t('button.cancel'), style: 'cancel' },
+        {
+          text: t('button.clean'),
+          style: 'destructive',
+          onPress: async () => {
+            await AsyncStorage.removeItem('history');
+            Alert.alert(t('return.success'), t('return.clear_history'));
+          }
         }
-      />
+      ]
+    );
+  };
+
+  const exportMarketHistory = async () => {
+    try {
+      const stored = await AsyncStorage.getItem('history');
+      const history: HistoryItem[] = stored ? JSON.parse(stored) : [];
+
+      if (history.length === 0) {
+        Alert.alert(t('return.warning'), t('return.none'));
+        return;
+      }
+
+      const content = history
+        .map((item) => {
+          const total = item.unitValue * item.quantity;
+          return `${item.product} ${item.quantity}x ${item.unitValue.toLocaleString('pt-BR', {
+            style: 'currency',
+            currency: 'BRL',
+          })} (${total.toLocaleString('pt-BR', {
+            style: 'currency',
+            currency: 'BRL',
+          })})`;
+        })
+        .join('\n');
+
+      const fileUri = FileSystem.documentDirectory + 'history.txt';
+
+      await FileSystem.writeAsStringAsync(fileUri, content, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+
+      await Sharing.shareAsync(fileUri);
+    } catch (error) {
+      console.error('Erro ao exportar histórico:', error);
+    }
+  };
+
+  return (
+    <ScrollView contentContainerStyle={[styles.container, { backgroundColor: colors.background }]}>
+
+      <View style={styles.header}>
+        <View style={styles.rowButtons}>
+          <Pressable
+            onPress={importProductsFromFile}
+            style={[styles.button, styles.halfButton, { backgroundColor: colors.info }]}
+          >
+            <Text style={styles.buttonText}>{t('button.import')} TXT</Text>
+          </Pressable>
+
+          <Pressable
+            onPress={exportProductsToFile}
+            style={[styles.button, styles.halfButton, { backgroundColor: colors.success }]}
+          >
+            <Text style={styles.buttonText}>{t('button.export')} TXT</Text>
+          </Pressable>
+        </View>
+
+        <View style={styles.rowButtons}>
+          <Pressable
+            onPress={exportMarketHistory}
+            style={[styles.button, styles.halfButton, { backgroundColor: colors.success }]}
+          >
+            <Text style={styles.buttonText}>{t('button.export') + ' Histórico'}</Text>
+          </Pressable>
+
+          <Pressable
+            onLongPress={clearMarketHistory}
+            style={[styles.button, styles.halfButton, { backgroundColor: colors.error || '#FF3B30' }]}
+          >
+            <Text style={styles.buttonText}>{t('button.clean') + ' Histórico'}</Text>
+          </Pressable>
+        </View>
+      </View>
 
       <View style={styles.footer}>
-        <Pressable 
-          onPress={importProductsFromFile} 
-          style={[styles.button, { backgroundColor: colors.info }]}
-        >
-          <Text style={styles.buttonText}>{t('button.import')} TXT</Text>
-        </Pressable>
-
-        <Pressable 
-          onPress={exportProductsToFile} 
-          style={[styles.button, { backgroundColor: colors.success }]}
-        >
-          <Text style={styles.buttonText}>{t('button.export')} TXT</Text>
-        </Pressable>
-
-        <Pressable 
-          onLongPress={clearProducts} // Opcional: usar onLongPress para segurança extra
-          style={[styles.button, { backgroundColor: colors.error || '#FF3B30', marginBottom: 15 }]}
+        <Pressable
+          onLongPress={clearProducts}
+          style={[styles.button, { backgroundColor: colors.error || '#FF3B30' }]}
         >
           <Text style={styles.buttonText}>{t('button.clear_database')}</Text>
         </Pressable>
-
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 26, fontWeight: 'bold', textAlign: 'center', marginTop: 10 },
-  subtitle: { fontSize: 14, textAlign: 'center', marginBottom: 20 },
-  button: { padding: 15, borderRadius: 10, alignItems: 'center', marginBottom: 10 },
-  buttonText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
-  item: { fontSize: 20, paddingVertical: 10 },
-  productRow: {
-    flexDirection: 'row',
+  container: {
+    flexGrow: 1,
+    padding: 20,
     justifyContent: 'space-between',
-    alignItems: 'center',
-    borderBottomWidth: 1,
   },
-  remove: {
-    fontSize: 22,
-    color: '#FF3B30',
-    paddingHorizontal: 15,
-    fontWeight: 'bold',
+  header: {
+    paddingTop: 10,
+    backgroundColor: 'transparent',
   },
   footer: {
-    marginTop: 10,
-    borderTopWidth: 0,
-    borderTopColor: '#eee',
-    paddingTop: 15
-  }
+    paddingBottom: 10,
+    backgroundColor: 'transparent',
+  },
+  button: {
+    padding: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  halfButton: {
+    flex: 1,
+  },
+  buttonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  rowButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginBottom: 10,
+    backgroundColor: 'transparent',
+  },
 });

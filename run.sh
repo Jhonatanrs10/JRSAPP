@@ -101,6 +101,8 @@ run_project() {
 	echo ""
 	echo "Rodando o projeto Expo (npx expo start)..."
 	npx expo start
+	echo "Press Enter to exit ..."
+	read saindoagora
 	# O comando npx expo start vai abrir o Metro Bundler no terminal e no navegador.
 	# Para voltar ao menu depois de parar o servidor (CTRL+C), o script precisa continuar.
 	# Dependendo de como você parar o servidor, pode ser necessário rodar o script novamente.
@@ -158,6 +160,47 @@ build_apk() {
 	read -r
 }
 
+build_apk_local() {
+    echo ""
+    echo "Iniciando o processo de build LOCAL do APK com EAS Build..."
+
+    # Garante que as variáveis do Android SDK estejam carregadas na sessão
+    if [ -z "$ANDROID_HOME" ]; then
+        export ANDROID_HOME=$HOME/Android/Sdk
+        export PATH=$PATH:$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin
+    fi
+
+    # Verifica se o eas.json existe
+    if [ ! -f "eas.json" ]; then
+        echo "Erro: O arquivo eas.json não foi encontrado na pasta raiz do projeto."
+        echo -n "Pressione ENTER para continuar..."
+        read -r
+        return 1
+    fi
+
+    echo ""
+    echo "Iniciando o build local do APK (profile preview)..."
+    echo "Isso utilizará os recursos e o SDK Android da sua máquina local."
+    echo "Pode levar alguns minutos na primeira execução para compilar as dependências Gradle..."
+    echo ""
+
+    npx eas-cli@latest build -p android --profile preview --local
+
+    if [ $? -eq 0 ]; then
+        echo ""
+        echo "✅ Build concluído com sucesso!"
+        echo "O arquivo .apk foi gerado no diretório atual."
+    else
+        echo ""
+        echo "❌ Ocorreu um erro durante o build local."
+        echo "Certifique-se de que o Android SDK, Java 17 e o NDK estejam instalados e configurados."
+    fi
+
+    echo ""
+    echo -n "Pressione ENTER para continuar..."
+    read -r
+}
+
 # --- NOVA FUNÇÃO PARA EXPO DOCTOR ---
 run_expo_doctor() {
 	echo ""
@@ -188,8 +231,10 @@ show_menu() {
 	echo "4. Verificar Saúde do Projeto (npx expo doctor)"
 	echo "5. Check versão das dependencias (npx expo install --check)"
 	echo "6. Update SDK (SDK 57)"
+	echo "8. Setup Android Studio"
 	echo "-------------------------------------"
 	echo "7. Buildar APK (EAS Build)"
+	echo "9. Buildar APK Local (EAS Build)"
 	echo "-------------------------------------"
 	echo "0. Sair"
 	echo "-------------------------------------"
@@ -204,10 +249,12 @@ while true; do
 	1) run_project ;;
 	3) install_dependencies ;;
 	7) build_apk ;;
+	9) build_apk_local ;;
 	4) run_expo_doctor ;; # Chama a nova função
 	2) open_vscode ;;
 	5) npxcheckversions ;;
-	6) update_sdk;;
+	6) update_sdk ;;
+	8) local_build_req ;;
 	0)
 		echo ""
 		echo "Saindo. Até mais!"

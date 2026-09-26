@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { useState, useEffect, useCallback } from 'react';
-import { Button, Alert, StyleSheet, ScrollView, Platform } from 'react-native';
+import { useState, useCallback } from 'react';
+import { Alert, StyleSheet, ScrollView, Platform } from 'react-native';
 import { Text, View } from '../../components/Themed';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy'; // Corrected import
@@ -69,18 +69,11 @@ export default function Import() {
   // State to control if filters are applied, showing more details in the summary section
   const [filtersApplied, setFiltersApplied] = useState(false);
 
-  // Sleep
-  const sleep = (ms: number): Promise<void> => {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  };
-
   async function limparFiltro() {
     setFiltersApplied(true);
     setStartDate(undefined);
     setEndDate(undefined);
-    //calcularResumoDados();
   }
-
 
   // --- Função para calcular o valor atual total (sempre com todas as transações) ---
   const calcularValorAtualTotal = useCallback(async () => {
@@ -102,13 +95,13 @@ export default function Import() {
       console.error('Error calculating total present value:', error);
       Alert.alert(t('return.error'), t('return.error_calc_value'));
     }
-  }, []);
+  }, [t]);
 
-  // Effect to calculate total value on initial load and whenever data changes (implicit via calcularResumoDados if it's called)
+  // Effect to calculate total value on initial load and whenever data changes
   useFocusEffect(
     useCallback(() => {
       calcularValorAtualTotal();
-    }, [])
+    }, [calcularValorAtualTotal])
   );
 
   // --- Função para calcular o resumo por Caixa, Mês e Categoria (com filtro) ---
@@ -122,30 +115,32 @@ export default function Import() {
       const isDateFilterActive = startDate !== undefined || endDate !== undefined;
       setFiltersApplied(isDateFilterActive); // Update the filter status for rendering
 
-      // Apply date filtering to the 'transacoes' array for the detailed summary
-      if (startDate && endDate) {
-        const endOfDay = new Date(endDate);
-        endOfDay.setHours(23, 59, 59, 999);
+      // Normaliza as datas de início e fim zerando horas / ajustando limites
+      const startOfDay = startDate ? new Date(startDate) : undefined;
+      if (startOfDay) {
+        startOfDay.setHours(0, 0, 0, 0);
+      }
 
-        transacoes = allTransacoes.filter(t => {
-          const [day, month, year] = t.data.split('/').map(Number);
-          const transactionDate = new Date(year, month - 1, day);
-
-          return transactionDate >= startDate && transactionDate <= endOfDay;
-        });
-      } else if (startDate) {
-        transacoes = allTransacoes.filter(t => {
-          const [day, month, year] = t.data.split('/').map(Number);
-          const transactionDate = new Date(year, month - 1, day);
-          return transactionDate >= startDate;
-        });
-      } else if (endDate) {
-        const endOfDay = new Date(endDate);
+      const endOfDay = endDate ? new Date(endDate) : undefined;
+      if (endOfDay) {
         endOfDay.setHours(23, 59, 59, 999);
+      }
+
+      // Aplica a filtragem por data nas transações
+      if (startOfDay || endOfDay) {
         transacoes = allTransacoes.filter(t => {
           const [day, month, year] = t.data.split('/').map(Number);
-          const transactionDate = new Date(year, month - 1, day);
-          return transactionDate <= endOfDay;
+          // Usamos meio-dia (12:00) para evitar variações por fuso horário/horário de verão
+          const transactionDate = new Date(year, month - 1, day, 12, 0, 0);
+
+          if (startOfDay && endOfDay) {
+            return transactionDate >= startOfDay && transactionDate <= endOfDay;
+          } else if (startOfDay) {
+            return transactionDate >= startOfDay;
+          } else if (endOfDay) {
+            return transactionDate <= endOfDay;
+          }
+          return true;
         });
       }
 
@@ -161,7 +156,7 @@ export default function Import() {
           resumoCaixas[t.caixa] = {
             totalEntradasCaixa: 0,
             totalSaidasCaixa: 0,
-            meses: {} // Initialize months, even if not rendered initially
+            meses: {}
           };
         }
 
@@ -171,14 +166,6 @@ export default function Import() {
         } else if (t.acao === 'entrada') {
           resumoCaixas[t.caixa].totalEntradasCaixa += valorTotalTransacao;
         }
-
-        // Populate detailed 'meses' and 'categorias' only if a filter is active
-        // This ensures the underlying data structure is ready if filtersApplied becomes true
-        // but it will only process this if it's relevant for rendering.
-        // The previous logic was correct, no need for the `if (filtersApplied)` here,
-        // because `filtersApplied` controls the rendering, not the data aggregation itself.
-        // The data aggregation should produce the full structure so `filtersApplied` can
-        // later decide what to show from that structure.
 
         // 2. Inicializa o mês dentro do Caixa se ele não existir
         if (!resumoCaixas[t.caixa].meses[mesAnoChave]) {
@@ -218,13 +205,12 @@ export default function Import() {
     } finally {
       setCarregandoResumo(false);
     }
-  }, [startDate, endDate]); // Recalculate when dates change
+  }, [startDate, endDate, t]);
 
-  // This effect ensures that the summary data (which can be filtered) is calculated
   useFocusEffect(
     useCallback(() => {
       calcularResumoDados();
-    }, [])
+    }, [calcularResumoDados])
   );
 
   // --- Exportar Transações (CSV) ---
@@ -537,34 +523,36 @@ export default function Import() {
     const allTransacoes = await buscarTransacoes() as Transacao[];
     let transacoes = allTransacoes;
 
-    // Apply date filtering for the report as well
-    if (startDate && endDate) {
-      const endOfDay = new Date(endDate);
-      endOfDay.setHours(23, 59, 59, 999); // Include the entire end date
-      transacoes = allTransacoes.filter(t => {
-        const [day, month, year] = t.data.split('/').map(Number);
-        const transactionDate = new Date(year, month - 1, day);
-        return transactionDate >= startDate && transactionDate <= endOfDay;
-      });
-    } else if (startDate) { // If only start date is provided
-      transacoes = allTransacoes.filter(t => {
-        const [day, month, year] = t.data.split('/').map(Number);
-        const transactionDate = new Date(year, month - 1, day);
-        return transactionDate >= startDate;
-      });
-    } else if (endDate) { // If only end date is provided
-      const endOfDay = new Date(endDate);
+    // Normaliza as datas limite para abranger todo o dia inicial e final
+    const startOfDay = startDate ? new Date(startDate) : undefined;
+    if (startOfDay) {
+      startOfDay.setHours(0, 0, 0, 0);
+    }
+
+    const endOfDay = endDate ? new Date(endDate) : undefined;
+    if (endOfDay) {
       endOfDay.setHours(23, 59, 59, 999);
+    }
+
+    // Aplica o filtro de data no relatório
+    if (startOfDay || endOfDay) {
       transacoes = allTransacoes.filter(t => {
         const [day, month, year] = t.data.split('/').map(Number);
-        const transactionDate = new Date(year, month - 1, day);
-        return transactionDate <= endOfDay;
+        const transactionDate = new Date(year, month - 1, day, 12, 0, 0);
+
+        if (startOfDay && endOfDay) {
+          return transactionDate >= startOfDay && transactionDate <= endOfDay;
+        } else if (startOfDay) {
+          return transactionDate >= startOfDay;
+        } else if (endOfDay) {
+          return transactionDate <= endOfDay;
+        }
+        return true;
       });
     }
 
-
     const resumoMensal: Record<string, Record<string, {
-      combinacoes: Record<string, { caixa: string; categoria: string; totalEntradas: number; totalSaidas: number; }>; // Alterado para caixa e categoria
+      combinacoes: Record<string, { caixa: string; categoria: string; totalEntradas: number; totalSaidas: number; }>;
       totalEntradasMes: number;
       totalSaidasMes: number;
     }>> = {};
@@ -573,9 +561,8 @@ export default function Import() {
       const valorTotalTransacao = t.valor * t.quantidade;
 
       const [_, mes, ano] = t.data.split('/');
-      const chaveMesAno = `${ano}-${mes}`; // Changed to YYYY-MM for consistent sorting
+      const chaveMesAno = `${ano}-${mes}`; // YYYY-MM
 
-      // Nova chave de combinação: Caixa e Categoria
       const chaveCombinacao = `${t.caixa}:::${t.categoria}`;
 
       if (!resumoMensal[ano]) {
@@ -597,8 +584,8 @@ export default function Import() {
 
       if (!resumoMensal[ano][chaveMesAno].combinacoes[chaveCombinacao]) {
         resumoMensal[ano][chaveMesAno].combinacoes[chaveCombinacao] = {
-          caixa: t.caixa, // Armazena a caixa
-          categoria: t.categoria, // Armazena a categoria
+          caixa: t.caixa,
+          categoria: t.categoria,
           totalEntradas: 0,
           totalSaidas: 0
         };
@@ -611,13 +598,11 @@ export default function Import() {
     });
 
     return { resumoMensal };
-  }, [startDate, endDate]); // Add startDate and endDate to dependency array
+  }, [startDate, endDate]);
 
   // --- Função para gerar conteúdo HTML do relatório PDF ---
   const gerarConteudoHtmlRelatorio = useCallback(async () => {
     const { resumoMensal } = await gerarDadosParaRelatorio();
-    // Removed timeStyle from toLocaleDateString as it's not supported by this method.
-    // If time is needed, use toLocaleString or toLocaleTimeString separately.
     const dataGeracao = new Date().toLocaleDateString('pt-BR', { dateStyle: 'short' });
 
     let htmlContent = `
@@ -629,7 +614,6 @@ export default function Import() {
           body { font-family: Arial, sans-serif; margin: 20px; }
           h1, h2, h3 { color: #333; text-align: center; margin-bottom: 10px; }
           .section { margin-bottom: 30px; border: 1px solid #eee; padding: 15px; border-radius: 8px; }
-          /* Adiciona quebra de página antes de cada subsection (cada mês) */
           .subsection {
             margin-top: 20px;
             margin-bottom: 15px;
@@ -637,9 +621,8 @@ export default function Import() {
             border: 1px solid #f9f9f9;
             background-color: #fcfcfc;
             border-radius: 5px;
-            page-break-before: always; /* Quebra de página aqui */
+            page-break-before: always;
           }
-          /* O primeiro mês não deve ter quebra de página antes */
           .subsection:first-of-type {
             page-break-before: auto;
           }
@@ -647,9 +630,9 @@ export default function Import() {
           th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
           th { background-color: #f2f2f2; }
           .total-row td { font-weight: bold; background-color: #e6e6e6; }
-          .entry { color: #28a745; font-weight: bold; } /* Verde para entradas */
-          .exit { color: #dc3545; font-weight: bold; }  /* Vermelho para saídas */
-          .balance { color: #007bff; font-weight: bold; } /* Azul para saldo */
+          .entry { color: #28a745; font-weight: bold; }
+          .exit { color: #dc3545; font-weight: bold; }
+          .balance { color: #007bff; font-weight: bold; }
           .footer { text-align: center; margin-top: 50px; font-size: 0.8em; color: #777; }
         </style>
       </head>
@@ -658,13 +641,11 @@ export default function Import() {
         <p style="text-align: center;">${t('return.generated_in')}: ${dataGeracao}</p>
     `;
 
-    // Add filter period to report title if present
     if (startDate || endDate) {
       const startText = startDate ? formatarData(startDate) : 'Início';
       const endText = endDate ? formatarData(endDate) : 'Fim';
       htmlContent += `<p style="text-align: center;">Período: ${startText} a ${endText}</p>`;
     }
-
 
     const mesesNomes = [
       t('months.january'), t('months.february'), t('months.march'), t('months.april'), t('months.may'), t('months.june'),
@@ -683,7 +664,6 @@ export default function Import() {
         `;
 
         const mesesDoAnoOrdenados = Object.keys(resumoMensal[ano]).sort((a, b) => {
-          // Sort by YYYY-MM format
           const [anoA, mesA] = a.split('-');
           const [anoB, mesB] = b.split('-');
           if (anoA !== anoB) return parseInt(anoA) - parseInt(anoB);
@@ -691,7 +671,7 @@ export default function Import() {
         });
 
         mesesDoAnoOrdenados.forEach(chaveMesAno => {
-          const [anoStrMes, mesNumeroStr] = chaveMesAno.split('-'); // Changed to YYYY-MM
+          const [anoStrMes, mesNumeroStr] = chaveMesAno.split('-');
           const mesIndex = parseInt(mesNumeroStr, 10) - 1;
           const nomeMes = mesesNomes[mesIndex];
 
@@ -721,7 +701,6 @@ export default function Import() {
                 <tbody>
           `;
 
-          // Novo tipo para os itens da tabela do PDF (Caixa e Categoria)
           type CaixaCategoriaItem = {
             caixa: string;
             categoria: string;
@@ -731,7 +710,6 @@ export default function Import() {
 
           const caixaCategoriaItens: CaixaCategoriaItem[] = Object.values(dadosMes.combinacoes);
 
-          // Ordenar por Caixa e depois por Categoria
           caixaCategoriaItens.sort((a, b) => {
             const caixaCompare = a.caixa.localeCompare(b.caixa);
             if (caixaCompare !== 0) {
@@ -779,7 +757,7 @@ export default function Import() {
     `;
 
     return htmlContent;
-  }, [gerarDadosParaRelatorio]); // Dependency on the data generation function
+  }, [gerarDadosParaRelatorio, startDate, endDate, t]);
 
   // --- Função para gerar o relatório PDF ---
   async function gerarRelatorioPdf() {
@@ -795,11 +773,11 @@ export default function Import() {
         await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
       }
 
-      Alert.alert('Sucesso', 'Relatório PDF gerado e pronto para ser compartilhado!');
+      //Alert.alert('Sucesso', 'Relatório PDF gerado e pronto para ser compartilhado!');
 
     } catch (error) {
       console.error('Erro ao gerar PDF:', error);
-      Alert.alert('Erro', 'Não foi possível gerar o relatório PDF. Verifique se você tem permissão para arquivos ou se o conteúdo não é muito grande.');
+      Alert.alert(t('return.error'), t('pdf.error-perm'));
     } finally {
       setExportando(false);
     }
@@ -815,14 +793,14 @@ export default function Import() {
 
       <ButtonTT
         buttonStyle={{ marginVertical: 5 }}
-        title={t('button.import')+" CSV"}
+        title={t('button.import') + " CSV"}
         onPress={importarTransacoes}
         disabled={importando}
         color={colors.info}
       />
       <ButtonTT
         buttonStyle={{ marginVertical: 5 }}
-        title={t('button.export')+" CSV"}
+        title={t('button.export') + " CSV"}
         onPress={exportarTransacoes}
         disabled={importando}
         color={colors.success}
@@ -843,9 +821,9 @@ export default function Import() {
             value={startDate || new Date()}
             mode="date"
             display="default"
-            onChange={(event, selectedDate) => {
+            onValueChange={(event, selectedDate) => {
               setShowDatePickerStart(Platform.OS === 'ios');
-              setStartDate(selectedDate || undefined); // Set to undefined if null/undefined
+              setStartDate(selectedDate || undefined);
             }}
           />
         )}
@@ -864,16 +842,17 @@ export default function Import() {
             value={endDate || new Date()}
             mode="date"
             display="default"
-            onChange={(event, selectedDate) => {
+            onValueChange={(event, selectedDate) => {
               setShowDatePickerEnd(Platform.OS === 'ios');
-              setEndDate(selectedDate || undefined); // Set to undefined if null/undefined
+              setEndDate(selectedDate || undefined);
             }}
           />
         )}
         <ButtonTT
           buttonStyle={{ marginVertical: 10 }}
           title={t('button.apply')}
-          onPress={calcularResumoDados} // Recalculate summary with new dates
+          displayButton={false}
+          onPress={calcularResumoDados}
           disabled={carregandoResumo}
           color={colors.info}
         />
@@ -929,12 +908,10 @@ export default function Import() {
                     {t('return.total_cash_balance')}:  {((dadosCaixa.totalEntradasCaixa - dadosCaixa.totalSaidasCaixa) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                   </Text>
 
-
                   {filtersApplied && (
                     <>
                       {Object.entries(dadosCaixa.meses)
                         .sort(([mesAnoA], [mesAnoB]) => {
-                          // Ordena os meses (MM/AAAA) cronologicamente
                           const [mesA, anoA] = mesAnoA.split('/');
                           const [mesB, anoB] = mesAnoB.split('/');
                           if (anoA !== anoB) return parseInt(anoA) - parseInt(anoB);
@@ -942,7 +919,7 @@ export default function Import() {
                         })
                         .map(([mesAnoChave, dadosMes]) => {
                           const [mesNumeroStr, anoStr] = mesAnoChave.split('/');
-                          const nomeMes = mesesNomes[parseInt(mesNumeroStr, 10) - 1]; // Converte o número do mês para nome
+                          const nomeMes = mesesNomes[parseInt(mesNumeroStr, 10) - 1];
 
                           return (
                             <View key={`${caixa}-${mesAnoChave}`} style={styles.resumoMesContainer}>
@@ -960,7 +937,6 @@ export default function Import() {
                               </Text>
 
                               <View style={[styles.linhaDivisoriaInterna, { backgroundColor: colors.borderColor }]} />
-
 
                               {Object.entries(dadosMes.categorias)
                                 .sort(([catA], [catB]) => catA.localeCompare(catB))
@@ -997,7 +973,7 @@ export default function Import() {
       <View style={styles.bottomSpacer} />
       {__DEV__ && (<ButtonTT
         buttonStyle={{ marginVertical: 5 }}
-        displayButton={true} // You might want to enable this for testing
+        displayButton={true}
         title={t('button.import_test')}
         onPress={importarDadosTeste}
         disabled={importando}
@@ -1041,8 +1017,8 @@ const styles = StyleSheet.create({
   spacer: {
     width: 10,
   },
-  // New styles for date filter
   dateFilterContainer: {
+    marginTop: 10,
     marginBottom: 20,
     padding: 10,
     borderWidth: 1,
@@ -1057,12 +1033,11 @@ const styles = StyleSheet.create({
   dateLabel: {
     fontSize: 16,
     marginRight: 10,
-    minWidth: 40, // Adjust as needed
+    minWidth: 40,
   },
   datePickerButton: {
-    flex: 1, // Make button take available space
+    flex: 1,
   },
-  // End new styles
   resumoGeralContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1082,7 +1057,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
-  // Estilos para o resumo por Caixa
   resumoCaixaContainer: {
     marginBottom: 15,
     padding: 10,
@@ -1100,12 +1074,11 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     fontWeight: 'bold',
   },
-  // Estilos para o resumo por Mês dentro do Caixa
   resumoMesContainer: {
     marginTop: 10,
     marginBottom: 10,
     paddingLeft: 10,
-    borderLeftWidth: 2, // Uma pequena borda para indicar o aninhamento
+    borderLeftWidth: 2,
     borderLeftColor: '#eee',
   },
   resumoMesTitulo: {
@@ -1123,10 +1096,9 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
   },
-  // Estilos para o resumo de Categoria dentro do Mês
   resumoCategoriaItem: {
     marginBottom: 5,
-    marginLeft: 20, // Indenta as categorias ainda mais
+    marginLeft: 20,
   },
   resumoCategoriaNome: {
     fontSize: 16,

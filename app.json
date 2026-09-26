@@ -13,6 +13,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./src/assets/images/adaptive-icon.png",
+        "backgroundImage": "./src/assets/images/background.png",
         "backgroundColor": "#ffffff"
       },
       "permissions": [
@@ -41,7 +42,15 @@
           "backgroundColor": "#ffffff"
         }
       ],
-      "expo-status-bar"
+      "expo-status-bar",
+      [
+    "expo-build-properties",
+    {
+      "android": {
+        "abiFilters": ["arm64-v8a"]
+      }
+    }
+  ]
     ],
     "experiments": {
       "typedRoutes": true
@@ -52,9 +61,7 @@
         "projectId": "899e2300-788e-46d1-9724-c6bc377656f6"
       }
     },
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
+    "runtimeVersion": "1.0.2",
     "updates": {
       "url": "https://u.expo.dev/899e2300-788e-46d1-9724-c6bc377656f6"
     }

@@ -25,7 +25,6 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Container com posicionamento absoluto explícito */}
       <LinearGradient
         colors={[gradientColor1, gradientColor2]}
         start={{ x: 0, y: 0 }}

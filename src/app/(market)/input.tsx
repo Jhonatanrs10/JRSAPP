@@ -1,22 +1,19 @@
 import { useTranslation } from 'react-i18next';
 import React, { useState, useRef, useEffect } from 'react';
-import { ScrollView, Pressable, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { ScrollView, Pressable, StyleSheet, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Text, View } from '../../components/Themed';
 import CalculatorButtons from '../../components/Jhonatanrs/CalculatorButtons';
-import QuantitySelector from '../../components/Jhonatanrs/QuantitySelector'; // Keep this import
-import QuantidadeControl from '@/src/components/Jhonatanrs/QuantidadeControl'; // Assuming this is still needed, though not used in the provided snippet
+import QuantitySelector from '../../components/Jhonatanrs/QuantitySelector';
 import ProductSelector from '../../components/Jhonatanrs/ProductSelector';
 import { useFocusEffect } from 'expo-router';
 import Colors from '../../constants/Colors';
 import { useColorScheme } from '../../components/useColorScheme';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard } from 'react-native';
 
 export default function App() {
   const { t } = useTranslation();
   const [input1, setInput1] = useState('');
-  const [input2, setInput2] = useState('1'); // This will now be controlled by QuantitySelector
+  const [input2, setInput2] = useState('1');
   const [selectedProduct, setSelectedProduct] = useState<string>(t('input_market.product'));
   const [products, setProducts] = useState<string[]>([]);
   const [history, setHistory] = useState<{ unitValue: number; quantity: number; product: string }[]>([]);
@@ -25,11 +22,7 @@ export default function App() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
 
-  const intervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const repeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
   const clearInput1 = () => setInput1('');
-  // const clearInput2 = () => setInput2('0'); // This function is no longer directly used for QuantitySelector
 
   useEffect(() => {
     const loadHistory = async () => {
@@ -81,9 +74,6 @@ export default function App() {
       };
 
       loadData();
-
-      return () => {
-      };
     }, [])
   );
 
@@ -93,9 +83,34 @@ export default function App() {
     return number.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
+  const handleDeleteProduct = (productName: string) => {
+    Alert.alert(
+      t('return.remove_item'),
+      `${t('return.remove_item_msg') || 'Deseja remover este produto?'} (${productName})`,
+      [
+        { text: t('button.cancel'), style: 'cancel' },
+        {
+          text: t('button.delete'),
+          style: 'destructive',
+          onPress: async () => {
+            const savedProducts = await AsyncStorage.getItem('products');
+            const currentProducts: string[] = savedProducts ? JSON.parse(savedProducts) : [];
+            const updatedProducts = currentProducts.filter((item) => item !== productName);
+
+            await AsyncStorage.setItem('products', JSON.stringify(updatedProducts));
+            setProducts(updatedProducts);
+
+            if (selectedProduct === productName) {
+              setSelectedProduct(t('input_market.product'));
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const addToHistory = async () => {
     const unitValue = parseFloat(input1.replace(/\D/g, '') || '0') / 100;
-    // input2 is now a string representation of the number from QuantitySelector
     let quantityToAdd = parseInt(input2, 10);
 
     if (unitValue <= 0) {
@@ -103,7 +118,6 @@ export default function App() {
       return;
     }
 
-    // Altera '0' para '1' e alerta o usuário
     if (quantityToAdd === 0) {
       quantityToAdd = 1;
     }
@@ -112,11 +126,10 @@ export default function App() {
       const savedProducts = await AsyncStorage.getItem('products');
       const currentProducts: string[] = savedProducts ? JSON.parse(savedProducts) : [];
 
-      // Se o produto digitado não estiver na lista, adiciona ele
       if (!currentProducts.includes(selectedProduct.trim())) {
         const updatedProducts = [...currentProducts, selectedProduct.trim()];
         await AsyncStorage.setItem('products', JSON.stringify(updatedProducts));
-        setProducts(updatedProducts); // Atualiza o estado local para o seletor refletir a mudança
+        setProducts(updatedProducts);
       }
     }
 
@@ -131,7 +144,7 @@ export default function App() {
     }
 
     setInput1('');
-    setInput2('1'); // Reset input2 after adding to history
+    setInput2('1');
     setSelectedProduct(t('input_market.product'));
   };
 
@@ -143,37 +156,14 @@ export default function App() {
 
   const handleBackspaceInput1 = () => setInput1((prev) => prev.slice(0, -1));
 
-  // This handler is no longer needed if QuantitySelector manages its own state
-  // const handleNumberPressInput2 = (num: string) => {
-  //   setInput2((prev) => {
-  //     if (prev === '0') {
-  //       if (num === '0') {
-  //         return '0';
-  //       }
-  //       return num;
-  //     }
-  //     return prev + num;
-  //   });
-  // };
-
-  // This handler is no longer needed if QuantitySelector manages its own state
-  // const handleBackspaceInput2 = () => {
-  //   setInput2((prev) => {
-  //     const newValue = prev.slice(0, -1);
-  //     return newValue === '' ? '0' : newValue;
-  //   });
-  // };
-
-  // New handler for QuantitySelector to update input2
   const handleQuantityChange = (newQuantity: number) => {
-    setInput2(newQuantity.toString()); // Update input2 state with the new quantity as a string
+    setInput2(newQuantity.toString());
   };
-
 
   return (
     <View style={{ flex: 1, paddingTop: 10, paddingHorizontal: 15, backgroundColor: colors.background }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background, height: 'auto' }}>
-        <Text style={styles.value}>{t('input_market.total') + " "}</Text>
+        <Text style={styles.value}>{t('input_market.total') + ' '}</Text>
         <Text
           style={[styles.value, { color: '#007700' }]}
           numberOfLines={1}
@@ -183,9 +173,11 @@ export default function App() {
           {accumulatedTotal}
         </Text>
       </View>
+
       <ProductSelector
         selectedProduct={selectedProduct}
         onSelect={setSelectedProduct}
+        onDeleteProduct={handleDeleteProduct}
         titleText={t('input_market.search_title')}
         placeholderText={t('placeholder.product_name')}
         closeText={t('button.close')}
@@ -196,24 +188,21 @@ export default function App() {
 
       <QuantitySelector onQuantityChange={handleQuantityChange} initialQuantity={parseInt(input2, 10)} />
 
-
       <CalculatorButtons
         onPressNumber={handleNumberPressInput1}
         onBackspace={handleBackspaceInput1}
         onStartBackspaceHold={clearInput1}
-        onStopBackspaceHold={() => { }}
+        onStopBackspaceHold={() => {}}
       />
 
-
       <Pressable style={[styles.addButton, { backgroundColor: colors.info, alignSelf: 'center' }]} onPress={addToHistory}>
-        <Text style={[styles.addButtonText]}>+</Text>
+        <Text style={styles.addButtonText}>+</Text>
       </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  label: { fontSize: 18, textAlign: 'center', marginTop: 5 },
   value: { fontSize: 35, textAlign: 'center', marginBottom: 5 },
   addButton: {
     justifyContent: 'center',
@@ -229,29 +218,5 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 25,
     fontWeight: 'bold',
-  },
-  historyItem: {
-    fontSize: 16,
-    marginVertical: 2,
-    textAlign: 'center',
-  },
-  productButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderColor: '#ccc',
-    borderWidth: 1,
-    marginRight: 10,
-  },
-  selectedProductButton: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
-  },
-  pickerContainer: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    marginBottom: 10,
-    overflow: 'hidden',
   },
 });

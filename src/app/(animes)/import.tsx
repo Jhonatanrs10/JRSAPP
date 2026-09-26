@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useState, useEffect, useCallback } from 'react'; // Importar useEffect e useCallback
 import ButtonTT from '../../components/Jhonatanrs/ButtonTT';
+import LinkModalButton from '../../components/Jhonatanrs/LinkModalButton';
 import { Button, Alert, StyleSheet, Share, Platform, ActivityIndicator } from 'react-native'; // Adicionado ActivityIndicator
 import { Text, View } from '../../components/Themed';
 import * as DocumentPicker from 'expo-document-picker';
@@ -382,7 +383,7 @@ export default function Import() {
       if (error instanceof Error) {
         errorMessage += `\nDetalhes: ${error.message}`;
       }
-      Alert.alert('Erro', errorMessage);
+      Alert.alert(t('return.error'), errorMessage);
     } finally {
       setImportando(false);
     }
@@ -446,6 +447,11 @@ export default function Import() {
         color={colors.success}
       />
 
+      <LinkModalButton
+        title={t('linkModal.button01')}
+        storageKey="@link_ia_guide"
+      />
+
       <View style={[styles.statsContainer, { backgroundColor: colors.inputBackground, borderColor: colors.borderColor }]}>
         {carregandoDados ? (
           <ActivityIndicator size="large" color={colors.tint} />
@@ -483,7 +489,7 @@ export default function Import() {
         disabled={importando}
         color={colors.info}
       />)}
-      
+
       <View style={styles.spacer} />
       <ButtonTT
         buttonStyle={{ marginVertical: 5, marginBottom: 30 }}
