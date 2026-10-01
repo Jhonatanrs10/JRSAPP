@@ -160,6 +160,10 @@ build_apk() {
 	read -r
 }
 
+change_slug_id(){
+	npx eas-cli project:init
+}
+
 build_apk_local() {
     echo ""
     echo "Iniciando o processo de build LOCAL do APK com EAS Build..."

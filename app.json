@@ -2,7 +2,7 @@
   "expo": {
     "name": "Berries",
     "slug": "berries",
-    "version": "2.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./src/assets/images/icon.png",
     "scheme": "berries",
@@ -17,6 +17,7 @@
         "backgroundColor": "#ffffff"
       },
       "permissions": [
+        "android.permission.CAMERA",
         "android.permission.CAMERA"
       ],
       "package": "com.jhonatanrs10.berries"
@@ -44,13 +45,15 @@
       ],
       "expo-status-bar",
       [
-    "expo-build-properties",
-    {
-      "android": {
-        "abiFilters": ["arm64-v8a"]
-      }
-    }
-  ]
+        "expo-build-properties",
+        {
+          "android": {
+            "abiFilters": [
+              "arm64-v8a"
+            ]
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
@@ -58,12 +61,13 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "899e2300-788e-46d1-9724-c6bc377656f6"
+        "projectId": "e7a6c459-7f54-43e8-9f60-5cccba4ce809"
       }
     },
     "runtimeVersion": "1.0.2",
     "updates": {
-      "url": "https://u.expo.dev/899e2300-788e-46d1-9724-c6bc377656f6"
-    }
+      "url": "https://u.expo.dev/e7a6c459-7f54-43e8-9f60-5cccba4ce809"
+    },
+    "owner": "jhonatanrs10"
   }
 }
