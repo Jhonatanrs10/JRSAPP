@@ -240,7 +240,7 @@ export default function Import() {
 
       const conteudo = cabecalho + linhas.join('\n');
       const dataAtual = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
-      const nomeArquivo = `transacoes_${dataAtual}.txt`;
+      const nomeArquivo = `finance_${dataAtual}.txt`;
 
       const fileUri = FileSystem.cacheDirectory + nomeArquivo;
       await FileSystem.writeAsStringAsync(fileUri, conteudo, { encoding: FileSystem.EncodingType.UTF8 });

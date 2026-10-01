@@ -17,8 +17,6 @@
         "backgroundColor": "#ffffff"
       },
       "permissions": [
-        "android.permission.CAMERA",
-        "android.permission.CAMERA"
       ],
       "package": "com.jhonatanrs10.berries"
     },
