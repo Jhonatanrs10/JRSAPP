@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <h1>Berries</h1>
+  <h1 style="font-size: 42px;">Berries</h1>
 </p>
 
 <p align="center">
