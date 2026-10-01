@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/Jhonatanrs10/JRSAPP/blob/main/src/assets/images/adaptive-icon.png?raw=true" alt="Berries App Icon" width="160" style="border-radius: 22%"/>
+  <img src="https://raw.githubusercontent.com/Jhonatanrs10/JRSAPP/refs/heads/main/src/assets/images/adaptive-icon.png" alt="Berries App Icon" width="160" style="border-radius: 22%"/>
 </p>
 
 <h1 align="center">Berries</h1>
