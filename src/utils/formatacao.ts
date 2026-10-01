@@ -72,7 +72,7 @@ const dataAtual = new Date();
 // diretamente como no exemplo 1. Mas se a string ISO já vem de algum lugar,
 // a lógica abaixo será necessária.
 const dataIsoString = new Date().toISOString();
-console.log(`String ISO original: ${dataIsoString}`);
+//console.log(`String ISO original: ${dataIsoString}`);
 // Para formatar uma STRING ISO, você precisaria de uma função que PARSE a string ISO.
 // A função formatarData original não é projetada para isso.
 // Se você realmente precisa formatar a string ISO, faça assim:
@@ -83,14 +83,14 @@ function formatarIsoStringParaDDMMYYYY(isoString: string): string {
   const ano = String(dateObj.getFullYear());
   return `${dia}/${mes}/${ano}`;
 }
-console.log(`String ISO formatada: ${formatarIsoStringParaDDMMYYYY(dataIsoString)}`); // Ex: "10/06/2025"
+//console.log(`String ISO formatada: ${formatarIsoStringParaDDMMYYYY(dataIsoString)}`); // Ex: "10/06/2025"
 
 // 3. Testando a função com entrada de string numérica (comportamento original)
-console.log(`Entrada "123": ${formatarData("123")}`); // Saída: "123"
-console.log(`Entrada "1234": ${formatarData("1234")}`); // Saída: "12/34"
-console.log(`Entrada "1234567": ${formatarData("1234567")}`); // Saída: "12/34/567" (ano com 3 dígitos)
-console.log(`Entrada "12345678": ${formatarData("12345678")}`); // Saída: "12/34/5678"
-console.log(`Entrada "12/AB/34 C D56-EF78": ${formatarData("12/AB/34 C D56-EF78")}`); // Saída: "12/34/5678"
+//console.log(`Entrada "123": ${formatarData("123")}`); // Saída: "123"
+//console.log(`Entrada "1234": ${formatarData("1234")}`); // Saída: "12/34"
+//console.log(`Entrada "1234567": ${formatarData("1234567")}`); // Saída: "12/34/567" (ano com 3 dígitos)
+//console.log(`Entrada "12345678": ${formatarData("12345678")}`); // Saída: "12/34/5678"
+//console.log(`Entrada "12/AB/34 C D56-EF78": ${formatarData("12/AB/34 C D56-EF78")}`); // Saída: "12/34/5678"
 
 export function formatarData2(texto: string): string {
   // Remove tudo que não for número

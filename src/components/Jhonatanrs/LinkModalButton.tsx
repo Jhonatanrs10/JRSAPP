@@ -245,8 +245,8 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    borderTopRightRadius: 8,
-    borderBottomRightRadius: 8,
+    borderTopRightRadius: 0,
+    borderBottomRightRadius: 0,
   },
   modalButtons: {
     flexDirection: 'row',
