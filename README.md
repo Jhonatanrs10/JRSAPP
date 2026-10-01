@@ -1,7 +1,9 @@
-# 🍓 Berries
+# <p align="center">
+  <img src="./assets/images/adaptive-icon.png" alt="Berries App Icon" width="120" />
+</p> Berries
 
 <p align="center">
-  <img src="./assets/icon.png" alt="Berries App Icon" width="120" />
+  <img src="./assets/images/adaptive-icon.png" alt="Berries App Icon" width="120" />
 </p>
 
 <p align="center">
@@ -12,7 +14,7 @@
 
 ## 📌 Sobre o Projeto
 
-O **Berries** é um aplicativo mobile de hobby desenvolvido para centralizar a gestão pessoal de forma prática e temática. O nome e a identidade do projeto são inspirados na famosa moeda do universo de *One Piece*, unindo o universo geek/anime à organização financeira e de tarefas cotidianas.
+O **Berries** é um aplicativo mobile (foco no Android) de hobby desenvolvido para centralizar a gestão pessoal de forma prática e temática. O nome e a identidade do projeto são inspirados na famosa moeda do universo de *One Piece*, unindo o universo geek/anime à organização financeira e de tarefas cotidianas.
 
 O aplicativo atualmente é dividido em **3 submódulos principais**:
 
@@ -40,9 +42,3 @@ Antes de começar, você precisará ter instalado em sua máquina:
 - [Node.js](https://nodejs.org/) (versão LTS recomendada)
 - [Git](https://git-scm.com/)
 - Aplicativo **Expo Go** no celular (para testes físicos) ou um emulador Android/iOS.
-
-### Passo a Passo
-
-1. **Clone este repositório:**
-   ```bash
-   git clone [https://github.com/seu-usuario/berries.git](https://github.com/seu-usuario/berries.git)
