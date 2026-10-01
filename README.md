@@ -3,8 +3,8 @@
 </p> Berries
 
 <p align="center">
-  <img src="./assets/images/adaptive-icon.png" alt="Berries App Icon" width="120" />
-</p>
+  <img src="https://github.com/Jhonatanrs10/JRSAPP/blob/main/src/assets/images/adaptive-icon.png?raw=true" alt="Berries App Icon" width="120" />
+</p>\
 
 <p align="center">
   <b>Meu hub pessoal para organizar animes, finanças e compras do dia a dia.</b>
