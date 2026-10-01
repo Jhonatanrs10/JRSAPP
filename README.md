@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <b>Berries</b>
+  Berries
 </p>
 
 ---
