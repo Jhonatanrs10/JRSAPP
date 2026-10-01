@@ -1,11 +1,11 @@
 <p align="center">
-  <img src="https://github.com/Jhonatanrs10/JRSAPP/blob/main/src/assets/images/adaptive-icon.png?raw=true" alt="Berries App Icon" width="160" />
+  <img src="https://github.com/Jhonatanrs10/JRSAPP/blob/main/src/assets/images/adaptive-icon.png?raw=true" alt="Berries App Icon" width="160" style="border-radius: 22%"/>
 </p>
 
 <h1 align="center">Berries</h1>
 
 <p align="center">
-  <sub><b>Seu hub pessoal para organizar animes, finanças e compras do dia a dia.</b></sub>
+  <sub><b>Meu hub pessoal para organizar animes, finanças e compras do dia a dia.</b></sub>
 </p>
 
 <p align="center">
