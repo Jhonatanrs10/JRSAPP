@@ -257,7 +257,7 @@ export default function Import() {
         dialogTitle: 'Save Transactions',
       });
 
-      Alert.alert(t('return.success'), t('return.success_export_finance'));
+      //Alert.alert(t('return.success'), t('return.success_export_finance'));
 
     } catch (error: unknown) {
       console.error('Error exporting transactions:', error);
@@ -476,6 +476,37 @@ export default function Import() {
         errorMessage += `\nDetails: ${error.message}`;
       }
       Alert.alert(t('return.error'), errorMessage);
+    } finally {
+      setImportando(false);
+    }
+  }
+
+  // --- Função Dev para cadastrar 'Corte de Cabelo' ---
+  async function cadastrarCorteCabelo() {
+    try {
+      setImportando(true);
+
+      const novoCadastro: Omit<Transacao, 'id'> = {
+        descricao: "Cortei Cabelo",
+        caixa: "Barbearia",
+        categoria: "Corte",
+        quantidade: 1,
+        valor: 1500,
+        tipo_transacao: "Dinheiro",
+        acao: "entrada",
+        data: formatarData(new Date()),
+      };
+
+      await salvarTransacao(novoCadastro);
+
+      Alert.alert(t('return.success'), t('return.success_add'));
+
+      // Atualiza os valores na interface
+      calcularResumoDados();
+      calcularValorAtualTotal();
+    } catch (error: unknown) {
+      console.error('Erro ao cadastrar transação de teste:', error);
+      Alert.alert(t('return.error'), t('return.error_add'));
     } finally {
       setImportando(false);
     }
@@ -806,6 +837,14 @@ export default function Import() {
         color={colors.success}
       />
 
+      <ButtonTT
+        buttonStyle={{ marginVertical: 5 }}
+        title={t('button.haircut')}
+        onPress={cadastrarCorteCabelo}
+        disabled={importando}
+        color={colors.info}
+      />
+
       <View style={styles.dateFilterContainer}>
         <View style={styles.datePickerRow}>
           <Text style={[styles.dateLabel, { color: colors.text }]}>{t('return.from')}:</Text>
@@ -975,7 +1014,7 @@ export default function Import() {
         buttonStyle={{ marginVertical: 5 }}
         displayButton={true}
         title={t('button.import_test')}
-        onPress={importarDadosTeste}
+        onLongPress={importarDadosTeste}
         disabled={importando}
         color={colors.info}
       />)}

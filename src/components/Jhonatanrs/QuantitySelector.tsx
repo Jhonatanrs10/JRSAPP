@@ -82,7 +82,7 @@ const QuantitySelector = ({ onQuantityChange, initialQuantity = 1 }: Props) => {
     const colors = Colors[colorScheme];
 
     return (
-        <View style={[styles.container,{backgroundColor: colors.background}]}>
+        <View style={[styles.container,{backgroundColor: colors.backgroundColor}]}>
             <Pressable
                 style={[styles.button,{backgroundColor: colors.inputBackground}]}
                 onPress={handleDecrement}
@@ -112,17 +112,21 @@ const styles = StyleSheet.create({
     container: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
+        justifyContent: 'space-between',
         marginBottom: 10,
+        margin: 0,
+        marginHorizontal: "5%",
+        padding: 0,
+        width: '90%',
     },
     button: {
-        width: 150,
-        height: 80,
-        borderRadius: 8,
+        width: 170,
+        height: 90,
+        borderRadius: 0,
         backgroundColor: '#eee',
         justifyContent: 'center',
         alignItems: 'center',
-        marginHorizontal: 10,
+        marginHorizontal: 0,
         elevation: 1,
     },
     buttonText: {
@@ -133,7 +137,6 @@ const styles = StyleSheet.create({
     quantityDisplay: {
         minWidth: 80,
         height: 80,
-        
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: '#fff',

@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "JRSAPP",
-    "slug": "JRSAPP",
-    "version": "1.0.2",
+    "name": "Berries",
+    "slug": "berries",
+    "version": "2.0.1",
     "orientation": "portrait",
     "icon": "./src/assets/images/icon.png",
     "scheme": "jrsapp",

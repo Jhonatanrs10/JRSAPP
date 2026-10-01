@@ -72,11 +72,11 @@ export default CalculatorButtons;
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 10
   },
   row: {
     flexDirection: 'row',
-    width: '90%',
+    width: '92%',
     justifyContent: 'space-between',
     marginBottom: 6,
   },
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
     height: 70,
     width: 70,
     marginHorizontal: 4,
-    borderRadius: 8,
+    borderRadius: 0,
     backgroundColor: '#eee',
     justifyContent: 'center',
     alignItems: 'center',

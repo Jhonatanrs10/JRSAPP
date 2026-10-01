@@ -17,7 +17,7 @@ import { ThemedPicker } from '../../components/ThemedPicker';
 import { useLocalSearchParams, useRouter, Stack, useFocusEffect } from 'expo-router';
 import Colors from '../../constants/Colors';
 import { useColorScheme } from '../../components/useColorScheme';
-import { salvarAnime, buscarAnimes, atualizarAnime } from '../../database/db';
+import { salvarAnime, atualizarAnime } from '../../database/db';
 import { FontAwesome } from '@expo/vector-icons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Clipboard from 'expo-clipboard';
@@ -43,20 +43,47 @@ export default function AnimesInput() {
   const { t } = useTranslation();
 
   const router = useRouter();
-  const params = useLocalSearchParams();
+  const params = useLocalSearchParams<{
+    id?: string;
+    nome?: string;
+    status?: StatusAnime;
+    release_day?: ReleaseDay;
+    observacao?: string;
+    link?: string;
+    seasons?: string;
+  }>();
+
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
 
-  const [nomeAnime, setNomeAnime] = useState('');
-  const [status, setStatus] = useState<StatusAnime>('plan_to_watch');
-  const [releaseDay, setReleaseDay] = useState<ReleaseDay>('monday');
-  const [observacao, setObservacao] = useState('');
-  const [link, setLink] = useState('');
+  // INICIALIZAÇÃO DIRETA DOS ESTADOS COM OS PARÂMETROS DA ROTA
+  // Isso elimina instantaneamente o delay ao abrir a tela de edição
+  const [nomeAnime, setNomeAnime] = useState(params.nome ? String(params.nome) : '');
+  const [status, setStatus] = useState<StatusAnime>(
+    params.status ? (String(params.status) as StatusAnime) : 'plan_to_watch'
+  );
+  const [releaseDay, setReleaseDay] = useState<ReleaseDay>(
+    params.release_day ? (String(params.release_day) as ReleaseDay) : 'monday'
+  );
+  const [observacao, setObservacao] = useState(params.observacao ? String(params.observacao) : '');
+  const [link, setLink] = useState(params.link ? String(params.link) : '');
 
   const [dynamicSeasonsData, setDynamicSeasonsData] = useState<number[]>([]);
   const dynamicInputRef = useRef<DynamicSeasonInputRef | null>(null);
 
-  const [animeSendoEditado, setAnimeSendoEditado] = useState<Anime | null>(null);
+  const [animeSendoEditado, setAnimeSendoEditado] = useState<Anime | null>(
+    params.id
+      ? {
+        id: Number(params.id),
+        nome: params.nome ? String(params.nome) : '',
+        status: params.status ? (String(params.status) as StatusAnime) : 'plan_to_watch',
+        release_day: params.release_day ? (String(params.release_day) as ReleaseDay) : 'monday',
+        observacao: params.observacao ? String(params.observacao) : null,
+        link: params.link ? String(params.link) : null,
+        seasons: params.seasons ? String(params.seasons) : null,
+      }
+      : null
+  );
 
   const statusOptions: ToggleOption<StatusAnime>[] = [
     { label: t('status.watching'), value: "watching" },
@@ -85,10 +112,18 @@ export default function AnimesInput() {
     }
     setDynamicSeasonsData([]);
     setAnimeSendoEditado(null);
-    router.setParams({ id: undefined });
+    router.setParams({
+      id: undefined,
+      nome: undefined,
+      status: undefined,
+      release_day: undefined,
+      observacao: undefined,
+      link: undefined,
+      seasons: undefined,
+    });
   }, [router]);
 
-// Limpa apenas o texto dos campos sem sair do modo de edição
+  // Limpa apenas o texto dos campos sem sair do modo de edição
   const limparApenasCamposFormulario = () => {
     setNomeAnime('');
     setStatus('plan_to_watch');
@@ -103,50 +138,40 @@ export default function AnimesInput() {
 
   useFocusEffect(
     useCallback(() => {
-      // Se tiver params.id, carrega os dados para edição
       if (params.id) {
-        const loadAnimeForEdit = async () => {
-          try {
-            const allAnimes = (await buscarAnimes()) as Anime[];
-            const foundAnime = allAnimes.find((a) => a.id === Number(params.id));
-            if (foundAnime) {
-              setAnimeSendoEditado(foundAnime);
-              setNomeAnime(foundAnime.nome);
-              setStatus(foundAnime.status);
-              setReleaseDay(foundAnime.release_day);
-              setObservacao(foundAnime.observacao || '');
-              setLink(foundAnime.link || '');
-              if (foundAnime.seasons) {
-                try {
-                  const parsedSeasons = JSON.parse(foundAnime.seasons);
-                  if (dynamicInputRef.current && parsedSeasons instanceof Array) {
-                    dynamicInputRef.current.setInitialSeasons(parsedSeasons);
-                  } else {
-                    setDynamicSeasonsData([]);
-                  }
-                } catch (e) {
-                  console.error('Error when analyzing seasons:', e);
-                  setDynamicSeasonsData([]);
-                }
-              } else {
-                setDynamicSeasonsData([]);
-              }
-            } else {
-              Alert.alert(t('return.error'), t('return.error_edit_anime'));
-              limparCampos();
-            }
-          } catch (error) {
-            console.error('Error loading anime for editing:', error);
-            Alert.alert(t('return.error'), t('return.error_load_anime'));
-            limparCampos();
-          }
+        // Preenche com os dados vindos direto da rota sem fazer consulta assíncrona ao DB
+        const currentAnime: Anime = {
+          id: Number(params.id),
+          nome: params.nome ? String(params.nome) : '',
+          status: params.status ? (String(params.status) as StatusAnime) : 'plan_to_watch',
+          release_day: params.release_day ? (String(params.release_day) as ReleaseDay) : 'monday',
+          observacao: params.observacao ? String(params.observacao) : null,
+          link: params.link ? String(params.link) : null,
+          seasons: params.seasons ? String(params.seasons) : null,
         };
-        loadAnimeForEdit();
+
+        setAnimeSendoEditado(currentAnime);
+        setNomeAnime(currentAnime.nome);
+        setStatus(currentAnime.status);
+        setReleaseDay(currentAnime.release_day);
+        setObservacao(currentAnime.observacao || '');
+        setLink(currentAnime.link || '');
+
+        if (currentAnime.seasons) {
+          try {
+            const parsedSeasons = JSON.parse(currentAnime.seasons);
+            if (dynamicInputRef.current && Array.isArray(parsedSeasons)) {
+              dynamicInputRef.current.setInitialSeasons(parsedSeasons);
+            }
+          } catch (e) {
+            console.error('Error when analyzing seasons:', e);
+          }
+        }
       } else {
-        // Se entrou na tela SEM params.id (ex: clicou na aba/botão de Novo Anime), limpa tudo
+        // Se entrou na tela SEM params.id, limpa tudo
         limparCampos();
       }
-    }, [params.id])
+    }, [params.id, params.nome, params.status, params.release_day, params.observacao, params.link, params.seasons, limparCampos])
   );
 
   async function salvarOuAtualizarAnime() {
@@ -171,10 +196,8 @@ export default function AnimesInput() {
 
       if (animeSendoEditado) {
         await atualizarAnime({ ...dadosAnime, id: animeSendoEditado.id } as Anime);
-        //Alert.alert(t('return.success'), t('return.anime_update'));
       } else {
         await salvarAnime(dadosAnime);
-        //Alert.alert(t('return.success'), t('return.anime_save'));
       }
 
       limparCampos();
@@ -185,31 +208,28 @@ export default function AnimesInput() {
     }
   }
 
-const handlePasteLink = async () => {
-  try {
-    const clipboardContent = await Clipboard.getStringAsync();
+  const handlePasteLink = async () => {
+    try {
+      const clipboardContent = await Clipboard.getStringAsync();
 
-    if (clipboardContent) {
-      // Procura por 'http://' ou 'https://' e pega tudo a partir daí
-      const match = clipboardContent.match(/https?:\/\/.*/i);
+      if (clipboardContent) {
+        const match = clipboardContent.match(/https?:\/\/.*/i);
 
-      if (match) {
-        // match[0] contém o link extraído (removendo qualquer texto anterior)
-        const extractedLink = match[0].trim();
-        setLink(extractedLink);
-        Alert.alert(t('return.success'), t('return.paste_from_cb'));
+        if (match) {
+          const extractedLink = match[0].trim();
+          setLink(extractedLink);
+          Alert.alert(t('return.success'), t('return.paste_from_cb'));
+        } else {
+          Alert.alert(t('return.warning'), t('return.no_link'));
+        }
       } else {
-        // Se houver texto, mas nenhum link válido com http/https
-        Alert.alert(t('return.warning'), t('return.no_link')); 
+        Alert.alert(t('return.warning'), t('return.cb_empty'));
       }
-    } else {
-      Alert.alert(t('return.warning'), t('return.cb_empty'));
+    } catch (error) {
+      console.error('Error pasting from clipboard:', error);
+      Alert.alert(t('return.error'), t('return.error_paste_link'));
     }
-  } catch (error) {
-    console.error('Error pasting from clipboard:', error);
-    Alert.alert(t('return.error'), t('return.error_paste_link'));
-  }
-};
+  };
 
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
 
@@ -217,17 +237,16 @@ const handlePasteLink = async () => {
     const keyboardDidShowListener = Keyboard.addListener(
       'keyboardDidShow',
       () => {
-        setKeyboardVisible(true); // Teclado está visível
+        setKeyboardVisible(true);
       }
     );
     const keyboardDidHideListener = Keyboard.addListener(
       'keyboardDidHide',
       () => {
-        setKeyboardVisible(false); // Teclado está oculto
+        setKeyboardVisible(false);
       }
     );
 
-    // Limpeza dos listeners ao desmontar o componente
     return () => {
       keyboardDidHideListener.remove();
       keyboardDidShowListener.remove();
@@ -238,13 +257,13 @@ const handlePasteLink = async () => {
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 10} // Este pode ser ajustado para um valor, ex: Header height
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 10}
     >
       <Stack.Screen
-  options={{
-    headerTitle: params.id ? `${t('anime_tab.input')} ${t('action.editing')} #${params.id}` : t('anime_tab.input'),
-  }}
-/>
+        options={{
+          headerTitle: params.id ? `${t('anime_tab.input')} ${t('action.editing')} #${params.id}` : t('anime_tab.input'),
+        }}
+      />
       <ScrollView
         style={styles.formContainer}
         contentContainerStyle={styles.formContent}
@@ -341,7 +360,7 @@ const handlePasteLink = async () => {
           <ButtonTT
             title={t('button.cancel_edit')}
             onPress={() => {
-              limparCampos(); // Cancela a edição, remove o ID e volta pra index
+              limparCampos();
               router.replace('/');
             }}
             color={colors.error}
@@ -350,7 +369,7 @@ const handlePasteLink = async () => {
 
         <ButtonTT
           title={t('button.clean')}
-          onPress={limparApenasCamposFormulario} // Limpa somente o texto dos campos
+          onPress={limparApenasCamposFormulario}
           color={colors.info}
         />
 
@@ -385,8 +404,6 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     flex: 1,
-    // Remover marginBottom aqui para que o ScrollView ocupe todo o espaço disponível
-    // e o KeyboardAvoidingView lide com o ajuste inferior.
   },
   formContent: {
     paddingBottom: 20,
@@ -418,7 +435,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 16,
   },
-  linkButton: { // Este estilo não está sendo usado no seu código atual
+  linkButton: {
     padding: 10,
     justifyContent: 'center',
     alignItems: 'center',
@@ -431,7 +448,6 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   buttonContainer: {
-    //backgroundColor: 'red',
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 10,
@@ -440,7 +456,6 @@ const styles = StyleSheet.create({
   spacer: {
     width: 10,
   },
-  // Estes estilos parecem ser de outro componente e não são usados aqui
   buscaContainer: {
     marginBottom: 15,
     borderRadius: 12,
@@ -458,7 +473,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     fontSize: 16,
   },
-  scrollView: { // Este estilo não está sendo usado no seu ScrollView principal, mas em outro lugar?
+  scrollView: {
     flex: 1,
   },
   animeItem: { borderRadius: 12, marginBottom: 15, overflow: 'hidden', borderWidth: 1, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3, },

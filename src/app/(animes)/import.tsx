@@ -128,7 +128,7 @@ export default function Import() {
         dialogTitle: 'Salvar Animes',
       });
 
-      Alert.alert(t('return.success'), t('return.success_export_anime'));
+      //Alert.alert(t('return.success'), t('return.success_export_anime'));
 
     } catch (error: unknown) {
       console.error('Error exporting anime:', error);

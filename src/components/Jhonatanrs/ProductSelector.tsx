@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState, useEffect, useRef } from 'react';
 import { Text, View } from '../../components/Themed';
 import {
@@ -37,10 +38,12 @@ export default function ProductSelector({
   const [products, setProducts] = useState<string[]>([]);
   const [isRendered, setIsRendered] = useState(false);
 
+  const { t } = useTranslation();
+
   const inputRef = useRef<RNTextInput>(null);
 
   const colorScheme = useColorScheme() ?? 'light';
-  
+
   const colors = {
     background: colorScheme === 'dark' ? '#000' : '#fff',
     inputBg: colorScheme === 'dark' ? '#1c1c1e' : '#f2f2f7',
@@ -91,9 +94,7 @@ export default function ProductSelector({
   };
 
   const removeProduct = (productName: string) => {
-    Alert.alert(
-      'Remover item',
-      `Deseja remover "${productName}" da lista de sugestões?`,
+    Alert.alert(t('return.remove_item'), t('return.remove_item_msg'),
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -119,7 +120,7 @@ export default function ProductSelector({
   };
 
   return (
-    <View style={{ backgroundColor: 'transparent' }}>
+    <View style={{ backgroundColor: 'transparent',alignItems: 'center' }}>
       <Pressable
         style={[styles.selectorButton, { backgroundColor: colors.inputBg }]}
         onPress={() => setModalVisible(true)}
@@ -200,7 +201,7 @@ export default function ProductSelector({
 }
 
 const styles = StyleSheet.create({
-  selectorButton: { borderRadius: 12, padding: 10, marginBottom: 10, height: 80, justifyContent: 'center', alignItems: 'center' },
+  selectorButton: { borderRadius: 0, padding: 10, marginBottom: 10, height: 80, width: '90%', justifyContent: 'center', alignItems: 'center' },
   selectorText: { fontSize: 22, fontWeight: '500' },
   modalContainer: { flex: 1, padding: 10, paddingTop: 25 },
   modalTitle: { fontSize: 24, marginBottom: 20, textAlign: 'center', fontWeight: 'bold' },

@@ -3,7 +3,7 @@ import React, { useCallback, useState } from 'react';
 import { Alert, FlatList, StyleSheet, TextInput } from 'react-native';
 import { Text, View } from '../../components/Themed';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import Colors from '../../constants/Colors';
 import { useColorScheme } from '../../components/useColorScheme';
 import ButtonTT from '../../components/Jhonatanrs/ButtonTT';
@@ -16,6 +16,7 @@ type HistoryItem = {
 
 export default function MarketHistoryScreen() {
   const { t } = useTranslation();
+  const router = useRouter();
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [busca, setBusca] = useState('');
 
@@ -28,6 +29,28 @@ export default function MarketHistoryScreen() {
       setHistory(JSON.parse(stored));
     } else {
       setHistory([]);
+    }
+  };
+
+  const editItem = (itemToEdit: HistoryItem) => {
+    // Busca o índice real dentro do array original
+    const realIndex = history.findIndex(
+      (item) =>
+        item.product === itemToEdit.product &&
+        item.unitValue === itemToEdit.unitValue &&
+        item.quantity === itemToEdit.quantity
+    );
+
+    if (realIndex !== -1) {
+      router.push({
+        pathname: '/input', // Ajuste a rota para a sua tela de input se o caminho for diferente
+        params: {
+          index: realIndex.toString(),
+          product: itemToEdit.product,
+          unitValue: itemToEdit.unitValue.toString(),
+          quantity: itemToEdit.quantity.toString(),
+        },
+      });
     }
   };
 
@@ -150,6 +173,12 @@ export default function MarketHistoryScreen() {
             { borderTopColor: colors.borderColor, backgroundColor: colors.inputBackground }
           ]}
         >
+          <ButtonTT
+            title={t('button.edit') || "Editar"}
+            onPress={() => editItem(item)}
+            color="info"
+            buttonStyle={{ marginRight: 10 }}
+          />
           <ButtonTT
             title="X"
             onPress={() => deleteItem(item)}

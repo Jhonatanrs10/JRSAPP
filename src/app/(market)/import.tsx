@@ -101,7 +101,7 @@ export default function ProductsScreen() {
       const updated = [...new Set([...current, ...newItems])];
 
       await saveProducts(updated);
-      Alert.alert(t('return.success'), t('return.import_completed'));
+      //Alert.alert(t('return.success'), t('return.import_completed'));
     } catch (error) {
       console.error('Erro ao importar:', error);
       Alert.alert(t('return.error'), t('return.error_import_format'));
@@ -186,14 +186,14 @@ export default function ProductsScreen() {
             onPress={exportMarketHistory}
             style={[styles.button, styles.halfButton, { backgroundColor: colors.success }]}
           >
-            <Text style={styles.buttonText}>{t('button.export') + ' Histórico'}</Text>
+            <Text style={styles.buttonText}>{t('return.export_history')}</Text>
           </Pressable>
 
           <Pressable
             onLongPress={clearMarketHistory}
             style={[styles.button, styles.halfButton, { backgroundColor: colors.error || '#FF3B30' }]}
           >
-            <Text style={styles.buttonText}>{t('button.clean') + ' Histórico'}</Text>
+            <Text style={styles.buttonText}>{t('return.clear_history')}</Text>
           </Pressable>
         </View>
       </View>

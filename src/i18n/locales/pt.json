@@ -48,7 +48,8 @@
     "create": "Criar",
     "apply": "Aplicar",
     "close": "Fechar",
-    "generated_pdf": "Gerar Relatório PDF"
+    "generated_pdf": "Gerar Relatório PDF",
+    "haircut": "Adicionar um Corte de Cabelo"
   },
   "item": {
     "release": "Dia de Assistir",
@@ -74,6 +75,8 @@
     "warning_name_status_anime": "O nome e o status do anime são obrigatórios.",
     "error": "Erro",
     "error_save_edit": "Não foi possível salvar/atualizar o anime.",
+    "error_add": "Não foi possível adicionar.",
+    "success_add": "Adicionado com sucesso.",
     "error_delete_anime": "Não foi possível excluir o anime.",
     "error_delete_transaction": "A transação não pôde ser excluída.",
     "error_edit_anime": "Anime não encontrado para edição.",
@@ -140,6 +143,7 @@
     "invalid_value_msg": "Por favor, insira um valor unitário maior que zero.",
     "remove_item": "Remover Item",
     "remove_item_msg": "Deseja excluir este produto?",
+    "export_history": "Exportar Histórico",
     "clear_history": "Limpar Histórico",
     "clear_history_msg": "Deseja excluir todos os itens da lista?",
     "warning_clean_database": "Deseja apagar os dados do banco de dados?"

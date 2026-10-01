@@ -1,17 +1,29 @@
 import { useTranslation } from 'react-i18next';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ScrollView, Pressable, StyleSheet, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Text, View } from '../../components/Themed';
 import CalculatorButtons from '../../components/Jhonatanrs/CalculatorButtons';
 import QuantitySelector from '../../components/Jhonatanrs/QuantitySelector';
 import ProductSelector from '../../components/Jhonatanrs/ProductSelector';
-import { useFocusEffect } from 'expo-router';
+// 1. Importar useLocalSearchParams e useRouter
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import Colors from '../../constants/Colors';
 import { useColorScheme } from '../../components/useColorScheme';
+import ButtonTT from '../../components/Jhonatanrs/ButtonTT';
 
 export default function App() {
   const { t } = useTranslation();
+  const router = useRouter();
+
+  // 2. Receber parâmetros da rota de edição
+  const params = useLocalSearchParams<{
+    index?: string;
+    product?: string;
+    unitValue?: string;
+    quantity?: string;
+  }>();
+
   const [input1, setInput1] = useState('');
   const [input2, setInput2] = useState('1');
   const [selectedProduct, setSelectedProduct] = useState<string>(t('input_market.product'));
@@ -19,44 +31,17 @@ export default function App() {
   const [history, setHistory] = useState<{ unitValue: number; quantity: number; product: string }[]>([]);
   const [accumulatedTotal, setAccumulatedTotal] = useState('R$ 0,00');
 
+  // Estado para armazenar o índice do item sendo editado
+  const [editIndex, setEditIndex] = useState<number | null>(null);
+
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
 
   const clearInput1 = () => setInput1('');
 
-  useEffect(() => {
-    const loadHistory = async () => {
-      const stored = await AsyncStorage.getItem('history');
-      if (stored) {
-        setHistory(JSON.parse(stored));
-      }
-    };
-    loadHistory();
-  }, []);
-
-  useEffect(() => {
-    const loadProducts = async () => {
-      const saved = await AsyncStorage.getItem('products');
-      if (saved) setProducts(JSON.parse(saved));
-    };
-    loadProducts();
-  }, []);
-
-  useEffect(() => {
-    const total = history.reduce(
-      (acc, item) => acc + item.unitValue * item.quantity,
-      0
-    );
-    setAccumulatedTotal(
-      total.toLocaleString('pt-BR', {
-        style: 'currency',
-        currency: 'BRL',
-      })
-    );
-  }, [history]);
-
+  // 3. Efeito para carregar e preencher os dados do item em edição quando a tela recebe o foco
   useFocusEffect(
-    React.useCallback(() => {
+    useCallback(() => {
       const loadData = async () => {
         const storedHistory = await AsyncStorage.getItem('history');
         if (storedHistory) {
@@ -71,11 +56,37 @@ export default function App() {
         } else {
           setProducts([]);
         }
+
+        // Se houver parâmetros de edição vindo do histórico
+        if (params.index !== undefined) {
+          setEditIndex(Number(params.index));
+          setSelectedProduct(params.product || t('input_market.product'));
+          setInput2(params.quantity ? String(params.quantity) : '1');
+
+          // Converte o valor unitário (float) de volta para centavos em string para o Input1
+          if (params.unitValue) {
+            const centavos = Math.round(parseFloat(params.unitValue) * 100);
+            setInput1(centavos.toString());
+          }
+        }
       };
 
       loadData();
-    }, [])
+    }, [params.index, params.product, params.unitValue, params.quantity, t])
   );
+
+  useEffect(() => {
+    const total = history.reduce(
+      (acc, item) => acc + item.unitValue * item.quantity,
+      0
+    );
+    setAccumulatedTotal(
+      total.toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+      })
+    );
+  }, [history]);
 
   const formatToCurrency = (value: string): string => {
     const numeric = value.replace(/\D/g, '');
@@ -83,33 +94,21 @@ export default function App() {
     return number.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
-  const handleDeleteProduct = (productName: string) => {
-    Alert.alert(
-      t('return.remove_item'),
-      `${t('return.remove_item_msg') || 'Deseja remover este produto?'} (${productName})`,
-      [
-        { text: t('button.cancel'), style: 'cancel' },
-        {
-          text: t('button.delete'),
-          style: 'destructive',
-          onPress: async () => {
-            const savedProducts = await AsyncStorage.getItem('products');
-            const currentProducts: string[] = savedProducts ? JSON.parse(savedProducts) : [];
-            const updatedProducts = currentProducts.filter((item) => item !== productName);
-
-            await AsyncStorage.setItem('products', JSON.stringify(updatedProducts));
-            setProducts(updatedProducts);
-
-            if (selectedProduct === productName) {
-              setSelectedProduct(t('input_market.product'));
-            }
-          },
-        },
-      ]
-    );
+  const limparFormulario = () => {
+    setInput1('');
+    setInput2('1');
+    setSelectedProduct(t('input_market.product'));
+    setEditIndex(null);
+    router.setParams({
+      index: undefined,
+      product: undefined,
+      unitValue: undefined,
+      quantity: undefined,
+    });
   };
 
-  const addToHistory = async () => {
+  // 4. Salvar Novo ou Atualizar Item Existente
+  const salvarOuAtualizarItem = async () => {
     const unitValue = parseFloat(input1.replace(/\D/g, '') || '0') / 100;
     let quantityToAdd = parseInt(input2, 10);
 
@@ -133,8 +132,17 @@ export default function App() {
       }
     }
 
-    const newItem = { product: selectedProduct, unitValue, quantity: quantityToAdd };
-    const updatedHistory = [...history, newItem];
+    const itemFormatado = { product: selectedProduct, unitValue, quantity: quantityToAdd };
+    let updatedHistory = [...history];
+
+    if (editIndex !== null) {
+      // Atualiza o item no índice especificado
+      updatedHistory[editIndex] = itemFormatado;
+    } else {
+      // Adiciona novo item
+      updatedHistory.push(itemFormatado);
+    }
+
     setHistory(updatedHistory);
 
     try {
@@ -143,9 +151,7 @@ export default function App() {
       console.error('Erro ao salvar o histórico:', error);
     }
 
-    setInput1('');
-    setInput2('1');
-    setSelectedProduct(t('input_market.product'));
+    limparFormulario();
   };
 
   const handleNumberPressInput1 = (num: string) =>
@@ -161,7 +167,7 @@ export default function App() {
   };
 
   return (
-    <View style={{ flex: 1, paddingTop: 10, paddingHorizontal: 15, backgroundColor: colors.background }}>
+    <View style={{ flex: 1, paddingTop: 10, paddingHorizontal: 0, backgroundColor: colors.background, }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background, height: 'auto' }}>
         <Text style={styles.value}>{t('input_market.total') + ' '}</Text>
         <Text
@@ -177,7 +183,6 @@ export default function App() {
       <ProductSelector
         selectedProduct={selectedProduct}
         onSelect={setSelectedProduct}
-        onDeleteProduct={handleDeleteProduct}
         titleText={t('input_market.search_title')}
         placeholderText={t('placeholder.product_name')}
         closeText={t('button.close')}
@@ -192,12 +197,31 @@ export default function App() {
         onPressNumber={handleNumberPressInput1}
         onBackspace={handleBackspaceInput1}
         onStartBackspaceHold={clearInput1}
-        onStopBackspaceHold={() => {}}
+        onStopBackspaceHold={() => { }}
       />
 
-      <Pressable style={[styles.addButton, { backgroundColor: colors.info, alignSelf: 'center' }]} onPress={addToHistory}>
-        <Text style={styles.addButtonText}>+</Text>
-      </Pressable>
+      {editIndex !== null ? (
+        <View style={styles.editActionContainer}>
+
+          <Pressable
+            style={[styles.editButton, { backgroundColor: colors.success, flex: 1 }]}
+            onPress={salvarOuAtualizarItem}
+          >
+            <Text style={styles.addButtonText}>{t('button.save') || "Salvar"}</Text>
+          </Pressable>
+
+          <Pressable
+            style={[styles.editButton, { backgroundColor: colors.error, marginLeft: 8, paddingHorizontal: 30 }]}
+            onPress={limparFormulario}
+          >
+            <Text style={styles.addButtonText}>X</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <Pressable style={[styles.addButton, { backgroundColor: colors.info, alignSelf: 'center' }]} onPress={salvarOuAtualizarItem}>
+          <Text style={styles.addButtonText}>+</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -208,15 +232,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#007AFF',
     paddingVertical: 10,
-    borderRadius: 16,
+    borderRadius: 0,
     marginTop: 0,
     height: 80,
     width: '90%',
     alignItems: 'center',
   },
+  editActionContainer: {
+    flexDirection: 'row',
+    alignSelf: 'center',
+    width: '90%',
+    height: 80,
+    marginTop: 0,
+  },
+  editButton: {
+    justifyContent: 'center',
+    borderRadius: 0,
+    alignItems: 'center',
+    height: '100%',
+  },
   addButtonText: {
     color: 'white',
-    fontSize: 25,
+    fontSize: 22,
     fontWeight: 'bold',
   },
 });
