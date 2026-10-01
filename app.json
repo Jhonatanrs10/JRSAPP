@@ -5,7 +5,7 @@
     "version": "2.0.1",
     "orientation": "portrait",
     "icon": "./src/assets/images/icon.png",
-    "scheme": "jrsapp",
+    "scheme": "berries",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true
@@ -19,7 +19,7 @@
       "permissions": [
         "android.permission.CAMERA"
       ],
-      "package": "com.jhonatanrs10.JRSAPP"
+      "package": "com.jhonatanrs10.berries"
     },
     "web": {
       "bundler": "metro",

@@ -49,7 +49,7 @@ export default function HomeScreen() {
         <View style={styles.spacer} />
 
         <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', marginTop: 50 }}>
-          <Text style={{ color: "white", fontSize: 10, fontWeight: 'bold' }}>Copyright © {new Date().getFullYear()} JRSAPP. {t('copyright')}.</Text>
+          <Text style={{ color: "white", fontSize: 10, fontWeight: 'bold' }}>Copyright © {new Date().getFullYear()} Berries. {t('copyright')}.</Text>
           <Text style={{ color: "white", fontSize: 8 }}>v{version} By Jhonatanrs</Text>
         </View>
 

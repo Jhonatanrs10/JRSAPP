@@ -159,6 +159,7 @@ const AnimeItem: React.FC<AnimeItemProps> = ({ anime, colors, abrirLink, editarA
         <ButtonTT
           title={t('button.watch')}
           onPress={() => abrirLink(anime.link)}
+          onLongPress={() => abrirLink(`https://www.google.com/search?q=${t('search.watch')}+${anime.nome}`)}
           color={colors.info}
         />
         <ButtonTT

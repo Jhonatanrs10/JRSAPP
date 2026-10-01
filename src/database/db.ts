@@ -4,7 +4,7 @@ let db: SQLite.SQLiteDatabase | null = null;
 
 function getDatabase() {
   if (!db) {
-    db = SQLite.openDatabaseSync('jrsapp.db');
+    db = SQLite.openDatabaseSync('berries.db');
   }
   return db;
 }

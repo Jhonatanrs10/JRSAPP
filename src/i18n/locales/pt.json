@@ -1,5 +1,5 @@
 {
-  "welcome": "Bem-vindo ao JRSAPP",
+  "welcome": "Bem-vindo ao Berries",
   "version": "Versão",
   "animes": "Animes",
   "finance": "Finanças",
@@ -9,6 +9,9 @@
     "watching": "Assistindo",
     "completed": "Concluído",
     "plan_to_watch": "Planejo Assistir"
+  },
+  "search": {
+    "watch": "Assistir"
   },
   "release": {
     "all": "Todos",
@@ -121,7 +124,7 @@
     "transaction_saved": "Transação salva com sucesso!",
     "Report": "Relatório",
     "generated_in": "Gerado em",
-    "generated_by": "Relatório gerado pelo aplicativo JRSAPP.",
+    "generated_by": "Relatório gerado pelo aplicativo Berries.",
     "detailed_report": "Relatório Detalhado",
     "generated_income_month": "Receita Total do Mês",
     "generated_expense_month": "Despesas Totais do Mês",
@@ -242,7 +245,7 @@
     "december": "Dezembro",
     "december_ab": "Dez"
   },
-  "pdf":{
+  "pdf": {
     "error-perm": "Não foi possível gerar o relatório PDF. Verifique se você tem permissão para arquivos ou se o conteúdo não é muito grande."
   },
   "linkModal": {
