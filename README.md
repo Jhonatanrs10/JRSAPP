@@ -52,3 +52,7 @@ Antes de começar, você precisará ter instalado em sua máquina:
 1. **Clone este repositório:**
    ```bash
    git clone [https://github.com/Jhonatanrs10/JRSAPP.git](https://github.com/Jhonatanrs10/JRSAPP.git)
+
+## 🚀 Futuras Atualizações (Roadmap)
+
+- [] onLongPress no import de market para em vez de gerar o arquivo txt copiar para a área de transferência.
